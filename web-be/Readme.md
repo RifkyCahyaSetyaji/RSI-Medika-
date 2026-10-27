@@ -37,6 +37,44 @@ web-be/
 
 > ⚠️ `SUPABASE_SERVICE_ROLE_KEY` mem-bypass Row Level Security. Hanya dipakai di backend, jangan pernah dikirim ke frontend / di-commit.
 
+## Database
+
+Skema ada di folder `database/`:
+
+| File         | Isi                                                        |
+| ------------ | ---------------------------------------------------------- |
+| `schema.sql` | 15 tabel + FK, constraint, index, RLS, generator ID        |
+| `seed.sql`   | Data contoh (opsional, untuk testing)                      |
+
+Cara menjalankan: Supabase Dashboard → **SQL Editor** → paste `schema.sql` → **Run**, lalu (opsional) `seed.sql`.
+
+Catatan:
+- Nama tabel `snake_case` (mis. `pengajuan_cuti`), nama kolom `camelCase` sesuai kamus data (mis. `idPegawai`).
+  Di supabase-js langsung pakai: `.from('pegawai').select('idPegawai, nama')`. Di SQL mentah kolom harus di-quote: `"idPegawai"`.
+- ID otomatis dibuat jika tidak diisi (mis. `PGW0000002`, `CUTI00000002`).
+- RLS aktif tanpa policy → tabel hanya bisa diakses lewat backend (service role key).
+
+### Peran Tenaga Medis & Pedoman Penggajian
+
+- `peran_tenaga_medis`: master peran (Dokter Umum, Dokter Spesialis, Dokter Gigi, Perawat, Bidan, Apoteker,
+  Analis Laboratorium, Radiografer, Fisioterapis, Ahli Gizi). Pegawai medis ditautkan lewat `pegawai.idPeran`
+  (NULL untuk non-medis). `akun.role` tetap kategori umum (mis. `Tenaga Medis`).
+- `pedoman_penggajian`: tarif per peran + masa berlaku (`berlakuMulai`/`berlakuSampai`), berisi gaji pokok,
+  tunjangan jabatan, tunjangan shift malam, lembur/jam, kehadiran/hari, % insentif jasa medis,
+  potongan alpa/hari, potongan terlambat/kejadian. Template pengisian ada di `seed.sql`.
+- Fungsi `hitung_gaji_tenaga_medis` menghitung rincian gaji dari pedoman yang berlaku:
+
+  ```js
+  const { data, error } = await getSupabase().rpc('hitung_gaji_tenaga_medis', {
+    p_id_pegawai: 'PGW0000001', p_periode: '2026-10',
+    p_jumlah_shift_malam: 6, p_jam_lembur: 10, p_hari_hadir: 22,
+    p_nilai_jasa_medis: 0, p_hari_alpa: 0, p_jumlah_terlambat: 1,
+  });
+  // data[0] -> { gajiPokok, tunjangan, potongan, totalGaji, idPedoman, ...rincian }
+  ```
+
+  Hasilnya disimpan ke tabel `penggajian` (termasuk `idPedoman`).
+
 ## Endpoint
 
 | Method | Path              | Keterangan                 |
