@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model absensi {
+  idAbsensi         String              @id @default(dbgenerated("('ABS'::text || lpad((nextval('seq_absensi'::regclass))::text, 9, '0'::text))")) @db.VarChar(12)
+  idPegawai         String              @db.VarChar(10)
+  idJadwal          String              @db.VarChar(10)
+  tanggal           DateTime            @db.Date
+  waktuMasuk        DateTime?           @db.Timestamp(6)
+  waktuPulang       DateTime?           @db.Timestamp(6)
+  statusKehadiran   String              @db.VarChar(20)
+  statusPulang      String?             @db.VarChar(20)
+  jadwal            jadwal              @relation(fields: [idJadwal], references: [idJadwal])
+  pegawai           pegawai             @relation(fields: [idPegawai], references: [idPegawai])
+  pengajuan_koreksi pengajuan_koreksi[]
+
+  @@index([idJadwal], map: "idx_absensi_jadwal")
+  @@index([idPegawai], map: "idx_absensi_pegawai")
+  @@index([tanggal], map: "idx_absensi_tanggal")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model akun {
+  idAkun     String       @id @default(dbgenerated("('AKN'::text || lpad((nextval('seq_akun'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
+  idPegawai  String       @unique @db.VarChar(10)
+  username   String       @unique @db.VarChar(50)
+  password   String       @db.VarChar(255)
+  role       String       @db.VarChar(30)
+  pegawai    pegawai      @relation(fields: [idPegawai], references: [idPegawai], onDelete: Cascade)
+  notifikasi notifikasi[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model data_cuti_tanggal {
+  tanggal        DateTime @id @db.Date
+  kuotaMaksimal  Int      @default(10) @db.SmallInt
+  jumlahTerpakai Int      @default(0) @db.SmallInt
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model jadwal {
+  idJadwal         String             @id @default(dbgenerated("('JDW'::text || lpad((nextval('seq_jadwal'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
+  idPegawai        String             @db.VarChar(10)
+  tanggal          DateTime           @db.Date
+  jamMulai         DateTime           @db.Time(6)
+  jamSelesai       DateTime           @db.Time(6)
+  jenisJadwal      String             @db.VarChar(50)
+  absensi          absensi[]
+  pegawai          pegawai            @relation(fields: [idPegawai], references: [idPegawai])
+  pengajuan_jadwal pengajuan_jadwal[]
+
+  @@index([idPegawai], map: "idx_jadwal_pegawai")
+  @@index([tanggal], map: "idx_jadwal_tanggal")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notifikasi {
+  idNotifikasi   String         @id @default(dbgenerated("('NTF'::text || lpad((nextval('seq_notifikasi'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idAkun         String         @db.VarChar(10)
+  idPengajuan    String         @db.VarChar(12)
+  pesan          String         @db.VarChar(255)
+  statusKirim    String         @db.VarChar(20)
+  tanggalKirim   DateTime       @db.Timestamp(6)
+  akun           akun           @relation(fields: [idAkun], references: [idAkun], onDelete: Cascade)
+  pengajuan_cuti pengajuan_cuti @relation(fields: [idPengajuan], references: [idPengajuan], onDelete: Cascade)
+
+  @@index([idAkun], map: "idx_notifikasi_akun")
+  @@index([idPengajuan], map: "idx_notifikasi_pengajuan")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pedoman_penggajian {
+  idPedoman                    String             @id @default(dbgenerated("('PDG'::text || lpad((nextval('seq_pedoman_penggajian'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPeran                      String             @db.VarChar(10)
+  gajiPokok                    Decimal            @db.Decimal(12, 2)
+  tunjanganJabatan             Decimal            @default(0) @db.Decimal(12, 2)
+  tunjanganShiftMalam          Decimal            @default(0) @db.Decimal(12, 2)
+  uangLemburPerJam             Decimal            @default(0) @db.Decimal(12, 2)
+  tunjanganKehadiranPerHari    Decimal            @default(0) @db.Decimal(12, 2)
+  persenInsentifJasaMedis      Decimal            @default(0) @db.Decimal(5, 2)
+  potonganTidakHadirPerHari    Decimal            @default(0) @db.Decimal(12, 2)
+  potonganTerlambatPerKejadian Decimal            @default(0) @db.Decimal(12, 2)
+  berlakuMulai                 DateTime           @db.Date
+  berlakuSampai                DateTime?          @db.Date
+  keterangan                   String?            @db.VarChar(255)
+  peran_tenaga_medis           peran_tenaga_medis @relation(fields: [idPeran], references: [idPeran])
+  penggajian                   penggajian[]
+
+  @@unique([idPeran, berlakuMulai], map: "uq_pedoman_peran_mulai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pegawai {
+  idPegawai                String                     @id @default(dbgenerated("('PGW'::text || lpad((nextval('seq_pegawai'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
+  nama                     String                     @db.VarChar(100)
+  nip                      String                     @unique @db.VarChar(30)
+  alamat                   String?                    @db.VarChar(255)
+  noTelp                   String?                    @db.VarChar(15)
+  email                    String                     @unique @db.VarChar(100)
+  jabatan                  String                     @db.VarChar(50)
+  unitKerja                String                     @db.VarChar(100)
+  statusPegawai            String                     @db.VarChar(20)
+  tanggalMasuk             DateTime                   @db.Date
+  sisaJatahCuti            Int                        @db.SmallInt
+  idPeran                  String?                    @db.VarChar(10)
+  absensi                  absensi[]
+  akun                     akun?
+  jadwal                   jadwal[]
+  peran_tenaga_medis       peran_tenaga_medis?        @relation(fields: [idPeran], references: [idPeran])
+  pengajuan_banding_gaji   pengajuan_banding_gaji[]
+  pengajuan_cuti           pengajuan_cuti[]
+  pengajuan_jadwal         pengajuan_jadwal[]
+  pengajuan_ketidakhadiran pengajuan_ketidakhadiran[]
+  penggajian               penggajian[]
+  rekening_pegawai         rekening_pegawai[]
+  transaksi_pembayaran     transaksi_pembayaran[]
+
+  @@index([idPeran], map: "idx_pegawai_peran")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pengajuan_banding_gaji {
+  idPengajuan    String  @id @default(dbgenerated("('BDG'::text || lpad((nextval('seq_pengajuan_banding_gaji'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai      String  @db.VarChar(10)
+  periodeGaji    String  @db.Char(7)
+  alasanBanding  String  @db.VarChar(255)
+  buktiPendukung String? @db.VarChar(255)
+  status         String  @db.VarChar(20)
+  keputusan      String? @db.VarChar(20)
+  pegawai        pegawai @relation(fields: [idPegawai], references: [idPegawai])
+
+  @@index([idPegawai], map: "idx_banding_pegawai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pengajuan_cuti {
+  idPengajuan      String            @id @default(dbgenerated("('CUTI'::text || lpad((nextval('seq_pengajuan_cuti'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai        String            @db.VarChar(10)
+  tanggalMulai     DateTime          @db.Date
+  tanggalSelesai   DateTime          @db.Date
+  durasi           Int               @db.SmallInt
+  jenisCuti        String            @db.VarChar(30)
+  alasan           String            @db.VarChar(255)
+  status           String            @db.VarChar(20)
+  keputusan        String?           @db.VarChar(20)
+  catatan          String?           @db.VarChar(255)
+  notifikasi       notifikasi[]
+  pegawai          pegawai           @relation(fields: [idPegawai], references: [idPegawai])
+  surat_hasil_cuti surat_hasil_cuti?
+
+  @@index([idPegawai], map: "idx_pengajuan_cuti_pegawai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pengajuan_jadwal {
+  idPengajuan     String    @id @default(dbgenerated("('PJAD'::text || lpad((nextval('seq_pengajuan_jadwal'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai       String    @db.VarChar(10)
+  idJadwal        String    @db.VarChar(10)
+  jenisPengajuan  String    @db.VarChar(50)
+  tanggalBaru     DateTime? @db.Date
+  jamMulaiBaru    DateTime? @db.Time(6)
+  jamSelesaiBaru  DateTime? @db.Time(6)
+  alasan          String    @db.VarChar(255)
+  status          String    @db.VarChar(20)
+  alasanPenolakan String?   @db.VarChar(255)
+  sisaJatahCuti   Int       @db.SmallInt
+  jadwal          jadwal    @relation(fields: [idJadwal], references: [idJadwal])
+  pegawai         pegawai   @relation(fields: [idPegawai], references: [idPegawai])
+
+  @@index([idJadwal], map: "idx_pengajuan_jadwal_jadwal")
+  @@index([idPegawai], map: "idx_pengajuan_jadwal_pegawai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pengajuan_ketidakhadiran {
+  idPengajuan     String   @id @default(dbgenerated("('KTH'::text || lpad((nextval('seq_pengajuan_ketidakhadiran'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai       String   @db.VarChar(10)
+  tanggalMulai    DateTime @db.Date
+  tanggalSelesai  DateTime @db.Date
+  jenis           String   @db.VarChar(30)
+  alasan          String   @db.VarChar(255)
+  berkasPendukung String?  @db.VarChar(255)
+  status          String   @db.VarChar(20)
+  catatan         String?  @db.VarChar(255)
+  pegawai         pegawai  @relation(fields: [idPegawai], references: [idPegawai])
+
+  @@index([idPegawai], map: "idx_ketidakhadiran_pegawai")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model pengajuan_koreksi {
+  idKoreksi       String    @id @default(dbgenerated("('KOR'::text || lpad((nextval('seq_pengajuan_koreksi'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idAbsensi       String    @db.VarChar(12)
+  waktuMasukBaru  DateTime? @db.Timestamp(6)
+  waktuPulangBaru DateTime? @db.Timestamp(6)
+  alasanKoreksi   String    @db.VarChar(255)
+  berkasPendukung String?   @db.VarChar(255)
+  status          String    @db.VarChar(20)
+  catatan         String?   @db.VarChar(255)
+  absensi         absensi   @relation(fields: [idAbsensi], references: [idAbsensi])
+
+  @@index([idAbsensi], map: "idx_koreksi_absensi")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model penggajian {
+  idGaji             String              @id @default(dbgenerated("('GJI'::text || lpad((nextval('seq_penggajian'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai          String              @db.VarChar(10)
+  periodeGaji        String              @db.Char(7)
+  gajiPokok          Decimal             @db.Decimal(12, 2)
+  tunjangan          Decimal             @default(0) @db.Decimal(12, 2)
+  potongan           Decimal             @default(0) @db.Decimal(12, 2)
+  totalGaji          Decimal             @db.Decimal(12, 2)
+  statusPembayaran   String              @db.VarChar(20)
+  idPedoman          String?             @db.VarChar(12)
+  pedoman_penggajian pedoman_penggajian? @relation(fields: [idPedoman], references: [idPedoman], onDelete: Restrict)
+  pegawai            pegawai             @relation(fields: [idPegawai], references: [idPegawai])
+
+  @@index([idPedoman], map: "idx_penggajian_pedoman")
+  @@index([idPegawai], map: "idx_penggajian_pegawai")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model peran_tenaga_medis {
+  idPeran            String               @id @default(dbgenerated("('PRN'::text || lpad((nextval('seq_peran_tenaga_medis'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
+  namaPeran          String               @unique @db.VarChar(50)
+  kategori           String               @db.VarChar(50)
+  deskripsi          String?              @db.VarChar(255)
+  pedoman_penggajian pedoman_penggajian[]
+  pegawai            pegawai[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model rekening_pegawai {
+  idRekening           String                 @id @default(dbgenerated("('REK'::text || lpad((nextval('seq_rekening_pegawai'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai            String                 @db.VarChar(10)
+  namaBank             String                 @db.VarChar(50)
+  nomorRekening        String                 @db.VarChar(30)
+  atasNama             String                 @db.VarChar(100)
+  pegawai              pegawai                @relation(fields: [idPegawai], references: [idPegawai])
+  transaksi_pembayaran transaksi_pembayaran[]
+
+  @@index([idPegawai], map: "idx_rekening_pegawai")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model surat_hasil_cuti {
+  idSurat        String         @id @default(dbgenerated("('SRT'::text || lpad((nextval('seq_surat_hasil_cuti'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPengajuan    String         @unique @db.VarChar(12)
+  nomorSurat     String         @unique @db.VarChar(50)
+  tanggalTerbit  DateTime       @db.Date
+  keputusan      String         @db.VarChar(20)
+  dokumenSurat   String?        @db.VarChar(255)
+  pengajuan_cuti pengajuan_cuti @relation(fields: [idPengajuan], references: [idPengajuan])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model transaksi_pembayaran {
+  idTransaksi      String           @id @default(dbgenerated("('TRX'::text || lpad((nextval('seq_transaksi_pembayaran'::regclass))::text, 8, '0'::text))")) @db.VarChar(12)
+  idPegawai        String           @db.VarChar(10)
+  idRekening       String           @db.VarChar(12)
+  nominal          Decimal          @db.Decimal(12, 2)
+  jenisTransaksi   String           @db.VarChar(30)
+  status           String           @db.VarChar(20)
+  tanggalTransaksi DateTime         @db.Timestamp(6)
+  pegawai          pegawai          @relation(fields: [idPegawai], references: [idPegawai])
+  rekening_pegawai rekening_pegawai @relation(fields: [idRekening], references: [idRekening])
+
+  @@index([idPegawai], map: "idx_transaksi_pegawai")
+  @@index([idRekening], map: "idx_transaksi_rekening")
+}

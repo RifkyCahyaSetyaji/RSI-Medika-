@@ -46,7 +46,26 @@ Skema ada di folder `database/`:
 | `schema.sql` | 15 tabel + FK, constraint, index, RLS, generator ID        |
 | `seed.sql`   | Data contoh (opsional, untuk testing)                      |
 
-Cara menjalankan: Supabase Dashboard → **SQL Editor** → paste `schema.sql` → **Run**, lalu (opsional) `seed.sql`.
+Cara menjalankan:
+- Menggunakan skrip SQL langsung: `npm run db:schema` (opsional `npm run db:seed`)
+- Menggunakan Prisma ORM: `npm run prisma:push` atau `npm run prisma:pull`
+
+### Prisma ORM Commands
+
+```bash
+npm run prisma:generate  # Generate Prisma Client
+npm run prisma:pull      # Introspeksi skema dari database Supabase
+npm run prisma:push      # Push perubahan schema.prisma ke database
+npm run prisma:studio    # Buka Prisma Studio GUI di browser
+```
+
+Client Prisma siap diimpor dari `src/config/prisma.js`:
+```js
+import { prisma } from '../config/prisma.js';
+
+const listPegawai = await prisma.pegawai.findMany();
+```
+
 
 Catatan:
 - Nama tabel `snake_case` (mis. `pengajuan_cuti`), nama kolom `camelCase` sesuai kamus data (mis. `idPegawai`).
