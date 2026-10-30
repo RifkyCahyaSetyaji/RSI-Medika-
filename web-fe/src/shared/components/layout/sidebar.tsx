@@ -1,0 +1,163 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import {
+  Home,
+  Calendar,
+  Fingerprint,
+  Mail,
+  Users,
+  FileText,
+  Clock,
+  BookOpen,
+  User,
+  LogOut,
+  CheckSquare,
+} from "lucide-react";
+import { useAuth, UserRole } from "@/shared/providers/auth-provider";
+import { LogoutModal } from "@/shared/components/modals/logout-modal";
+import { cn } from "@/shared/lib/utils";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+}
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { role, logout } = useAuth();
+  const [showLogout, setShowLogout] = useState(false);
+
+  // Dynamic navigation items based on active role
+  const getNavItems = (currentRole: UserRole): NavItem[] => {
+    switch (currentRole) {
+      case "HRD":
+        return [
+          { label: "Beranda", href: "/dashboard", icon: Home },
+          { label: "Kepegawaian", href: "/kepegawaian", icon: Users },
+          { label: "Aju Banding", href: "/aju-banding", icon: FileText },
+          { label: "Absensi", href: "/rekap-absensi", icon: Clock },
+          { label: "Pedoman Gaji", href: "/pedoman-gaji", icon: BookOpen },
+          { label: "Gaji", href: "/gaji", icon: Mail },
+        ];
+      case "SEKRETARIS":
+        return [
+          { label: "Beranda", href: "/dashboard", icon: Home },
+          { label: "Jadwal", href: "/kelola-jadwal", icon: Calendar },
+          { label: "Pengajuan Absensi", href: "/absensi", icon: CheckSquare },
+          { label: "Gaji", href: "/gaji", icon: Mail },
+        ];
+      case "KEUANGAN":
+        return [
+          { label: "Beranda", href: "/dashboard", icon: Home },
+          { label: "Aju Banding", href: "/aju-banding", icon: FileText },
+          { label: "Pedoman Gaji", href: "/pedoman-gaji", icon: BookOpen },
+          { label: "Kelola Gaji", href: "/gaji", icon: Mail },
+        ];
+      case "TENAGA_MEDIS":
+      default:
+        return [
+          { label: "Beranda", href: "/dashboard", icon: Home },
+          { label: "Jadwal", href: "/jadwal", icon: Calendar },
+          { label: "Absensi", href: "/absensi", icon: Fingerprint },
+          { label: "Gaji", href: "/gaji", icon: Mail },
+        ];
+    }
+  };
+
+  const navItems = getNavItems(role);
+
+  return (
+    <>
+      <aside className="w-64 min-w-64 bg-white rounded-[28px] p-6 shadow-sm border border-black/5 flex flex-col justify-between shrink-0 my-3 ml-3 min-h-[calc(100vh-24px)]">
+        {/* Top: Logo & Nav items */}
+        <div className="space-y-8">
+          {/* Brand header */}
+          <Link href="/dashboard" className="flex items-center gap-3 px-2 group">
+            <div className="relative w-11 h-11 shrink-0">
+              <Image
+                src="/images/medika-logo.png"
+                alt="Medika Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-xl leading-tight text-[#202020] tracking-tight">
+                Medika
+              </span>
+              <span className="text-xs text-[#5F5F5F] font-normal leading-tight">
+                Portal Rumah Sakit
+              </span>
+            </div>
+          </Link>
+
+          {/* Navigation Links */}
+          <nav className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = pathname === item.href;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-150",
+                    isActive
+                      ? "bg-[#4731B6] text-white shadow-sm"
+                      : "text-[#3F3F3F] hover:bg-gray-100 hover:text-[#202020]"
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      "w-5 h-5 shrink-0 transition-colors",
+                      isActive ? "text-white" : "text-[#3F3F3F]"
+                    )}
+                  />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Bottom: Profil & Logout buttons */}
+        <div className="space-y-3 pt-6 border-t border-gray-100">
+          <Link
+            href="/profil"
+            className={cn(
+              "flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl text-sm font-medium transition-all",
+              pathname === "/profil"
+                ? "bg-[#4731B6] text-white"
+                : "border border-gray-200 text-[#3F3F3F] hover:bg-gray-50"
+            )}
+          >
+            <User className="w-4 h-4 shrink-0" />
+            <span>Profil</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setShowLogout(true)}
+            className="flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl bg-[#9A2500] hover:bg-[#801F00] text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Keluar</span>
+          </button>
+        </div>
+      </aside>
+
+      <LogoutModal
+        isOpen={showLogout}
+        onClose={() => setShowLogout(false)}
+        onConfirm={logout}
+      />
+    </>
+  );
+}
