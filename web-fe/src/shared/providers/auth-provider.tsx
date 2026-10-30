@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export type UserRole = "TENAGA_MEDIS" | "HRD" | "SEKRETARIS" | "KEUANGAN";
@@ -66,20 +66,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRoleState] = useState<UserRole>("TENAGA_MEDIS");
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  const [role, setRoleState] = useState<UserRole>(() => {
+    if (typeof window !== "undefined") {
+      const savedRole = localStorage.getItem("medika_role") as UserRole;
+      if (savedRole && ROLE_PROFILES[savedRole]) {
+        return savedRole;
+      }
+    }
+    return "TENAGA_MEDIS";
+  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      const authStatus = localStorage.getItem("medika_auth");
+      if (authStatus === "false") {
+        return false;
+      }
+    }
+    return true;
+  });
   const router = useRouter();
-
-  useEffect(() => {
-    const savedRole = localStorage.getItem("medika_role") as UserRole;
-    if (savedRole && ROLE_PROFILES[savedRole]) {
-      setRoleState(savedRole);
-    }
-    const authStatus = localStorage.getItem("medika_auth");
-    if (authStatus === "false") {
-      setIsAuthenticated(false);
-    }
-  }, []);
 
   const switchRole = (newRole: UserRole) => {
     setRoleState(newRole);

@@ -16,9 +16,8 @@ export default function RekapAbsensiPage() {
   const [search, setSearch] = useState("");
   const [periode, setPeriode] = useState("Mei 2025");
   const [showToast, setShowToast] = useState(false);
-  const [selectedPegawai, setSelectedPegawai] = useState<AbsensiMonitorItem | null>(null);
 
-  const [items, setItems] = useState<AbsensiMonitorItem[]>([
+  const [items] = useState<AbsensiMonitorItem[]>([
     {
       nip: "198904122014022001",
       pegawai: "Ayu Lestari",
@@ -61,32 +60,32 @@ export default function RekapAbsensiPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Title & Subtitle */}
       <div className="space-y-1">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#202020] tracking-tight">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#202020] tracking-tight">
           Absensi
         </h2>
-        <p className="text-sm text-[#5F5F5F]">
+        <p className="text-xs sm:text-sm text-[#5F5F5F]">
           Kelola data dan status absensi seluruh pegawai rumah sakit.
         </p>
       </div>
 
       {showToast && (
-        <div className="p-4 rounded-2xl bg-[#D8F0D3] border border-[#0E6100]/20 text-[#0E6100] text-sm flex items-center justify-between shadow-xs">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#D8F0D3] border border-[#0E6100]/20 text-[#0E6100] text-xs sm:text-sm flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <span>Rekapitulasi kehadiran pegawai periode {periode} berhasil diekspor ke Excel / PDF!</span>
           </div>
-          <button onClick={() => setShowToast(false)}>
+          <button onClick={() => setShowToast(false)} className="cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Filter and Action Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 flex-1 max-w-2xl">
           {/* Search Field */}
           <div className="flex-1 space-y-1">
             <span className="text-xs font-semibold text-[#202020] block">Pencarian</span>
@@ -96,7 +95,7 @@ export default function RekapAbsensiPage() {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari data..."
+                placeholder="Cari NIP atau nama pegawai..."
                 className="w-full bg-white border border-[#D8D8D8] focus:border-[#4731B6] rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm text-[#202020] outline-none"
               />
             </div>
@@ -121,11 +120,11 @@ export default function RekapAbsensiPage() {
         </div>
 
         {/* Unduh Rekap Button */}
-        <div className="self-end sm:self-auto sm:pt-5">
+        <div className="w-full sm:w-auto">
           <button
             type="button"
             onClick={handleDownload}
-            className="w-full sm:w-auto py-2.5 px-6 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto py-2.5 px-5 sm:px-6 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             <Download className="w-4 h-4" />
             <span>Unduh rekap</span>
@@ -134,30 +133,30 @@ export default function RekapAbsensiPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[28px] overflow-hidden shadow-xs border border-black/5">
+      <div className="bg-white rounded-[20px] sm:rounded-[28px] overflow-hidden shadow-xs border border-black/5">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left min-w-[620px] sm:min-w-full">
             <thead>
               <tr className="bg-[#4731B6] text-white text-xs font-semibold tracking-wider">
-                <th className="py-4 px-6">NIP</th>
-                <th className="py-4 px-6">Pegawai</th>
-                <th className="py-4 px-6">Kehadiran</th>
-                <th className="py-4 px-6">Terlambat</th>
-                <th className="py-4 px-6 text-center">Status</th>
-                <th className="py-4 px-6 text-center">Aksi</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">NIP</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Pegawai</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Kehadiran</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Terlambat</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">Status</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
               {filtered.map((item) => (
                 <tr key={item.nip} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="py-4 px-6 font-mono text-[#5F5F5F]">{item.nip}</td>
-                  <td className="py-4 px-6 font-bold text-[#202020]">{item.pegawai}</td>
-                  <td className="py-4 px-6 text-[#3F3F3F]">{item.kehadiran}</td>
-                  <td className="py-4 px-6 text-[#9A2500] font-medium">{item.terlambat}</td>
-                  <td className="py-4 px-6 text-center">
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-mono text-[#5F5F5F] whitespace-nowrap">{item.nip}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-bold text-[#202020] whitespace-nowrap">{item.pegawai}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-[#3F3F3F] whitespace-nowrap">{item.kehadiran}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-[#9A2500] font-medium whitespace-nowrap">{item.terlambat}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">
                     <StatusBadge status={item.status} />
                   </td>
-                  <td className="py-4 px-6 text-center">
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => alert(`Rincian absensi ${item.pegawai}`)}
@@ -168,6 +167,13 @@ export default function RekapAbsensiPage() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-xs sm:text-sm text-[#7E7E7E]">
+                    Tidak ada data absensi pegawai yang cocok.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

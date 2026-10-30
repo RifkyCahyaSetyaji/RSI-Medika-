@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Plus, Calendar, Clock, X, CheckCircle2 } from "lucide-react";
+import { Search, Plus, X, CheckCircle2 } from "lucide-react";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
 
 interface ScheduleItem {
@@ -102,32 +102,32 @@ export default function KelolaJadwalPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Title & Subtitle */}
       <div className="space-y-1">
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#202020] tracking-tight">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#202020] tracking-tight">
           Kelola Jadwal Kerja
         </h2>
-        <p className="text-sm text-[#5F5F5F]">
+        <p className="text-xs sm:text-sm text-[#5F5F5F]">
           Atur pembagian shift tenaga medis pada unit kerja Anda.
         </p>
       </div>
 
       {showToast && (
-        <div className="p-4 rounded-2xl bg-[#D8F0D3] border border-[#0E6100]/20 text-[#0E6100] text-sm flex items-center justify-between shadow-xs">
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#D8F0D3] border border-[#0E6100]/20 text-[#0E6100] text-xs sm:text-sm flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2.5">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <span>Jadwal dinas baru berhasil diterbitkan dan dinotifikasikan ke pegawai!</span>
           </div>
-          <button onClick={() => setShowToast(false)}>
+          <button onClick={() => setShowToast(false)} className="cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {/* Filter and Add Button */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-2xl">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-end justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 flex-1 max-w-2xl">
           <div className="flex-1 space-y-1">
             <span className="text-xs font-semibold text-[#202020] block">Pencarian tenaga medis</span>
             <div className="relative">
@@ -157,11 +157,11 @@ export default function KelolaJadwalPage() {
           </div>
         </div>
 
-        <div className="self-end sm:self-auto sm:pt-5">
+        <div className="w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="w-full sm:w-auto py-2.5 px-6 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+            className="w-full sm:w-auto py-2.5 px-5 sm:px-6 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Jadwal Kerja</span>
@@ -170,33 +170,33 @@ export default function KelolaJadwalPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[28px] overflow-hidden shadow-xs border border-black/5">
+      <div className="bg-white rounded-[20px] sm:rounded-[28px] overflow-hidden shadow-xs border border-black/5">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left min-w-[620px] sm:min-w-full">
             <thead>
               <tr className="bg-[#4731B6] text-white text-xs font-semibold tracking-wider">
-                <th className="py-4 px-6">Tenaga Medis</th>
-                <th className="py-4 px-6">NIP</th>
-                <th className="py-4 px-6">Tanggal Dinas</th>
-                <th className="py-4 px-6">Shift & Jam</th>
-                <th className="py-4 px-6 text-center">Status</th>
-                <th className="py-4 px-6 text-center">Aksi</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Tenaga Medis</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">NIP</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Tanggal Dinas</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">Shift & Jam</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">Status</th>
+                <th className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
               {filtered.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
-                  <td className="py-4 px-6 font-bold text-[#202020]">{item.pegawai}</td>
-                  <td className="py-4 px-6 font-mono text-[#5F5F5F]">{item.nip}</td>
-                  <td className="py-4 px-6 text-[#3F3F3F]">{item.tanggal}</td>
-                  <td className="py-4 px-6">
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-bold text-[#202020] whitespace-nowrap">{item.pegawai}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-mono text-[#5F5F5F] whitespace-nowrap">{item.nip}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-[#3F3F3F] whitespace-nowrap">{item.tanggal}</td>
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 whitespace-nowrap">
                     <span className="font-semibold text-[#4731B6]">{item.shift}</span>
                     <span className="text-[#7E7E7E] text-xs block">{item.jam}</span>
                   </td>
-                  <td className="py-4 px-6 text-center">
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">
                     <StatusBadge status={item.status} />
                   </td>
-                  <td className="py-4 px-6 text-center">
+                  <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-center whitespace-nowrap">
                     <button
                       type="button"
                       onClick={() => alert(`Kelola jadwal ${item.pegawai}`)}
@@ -207,20 +207,31 @@ export default function KelolaJadwalPage() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-xs sm:text-sm text-[#7E7E7E]">
+                    Tidak ada jadwal kerja yang sesuai pencarian.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Modal Tambah Jadwal Kerja (Figma #204:19768) */}
+      {/* Modal Tambah Jadwal Kerja */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-lg bg-white rounded-[28px] p-6 sm:p-8 shadow-2xl border border-gray-100 space-y-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-lg bg-white rounded-[24px] sm:rounded-[28px] p-5 sm:p-8 shadow-2xl border border-gray-100 space-y-5 sm:space-y-6 relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="font-bold text-lg text-[#202020]">
+              <h3 className="font-bold text-base sm:text-lg text-[#202020]">
                 Tambah Jadwal Kerja Unit
               </h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 hover:text-gray-600">
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -231,7 +242,7 @@ export default function KelolaJadwalPage() {
                 <select
                   value={pegawaiName}
                   onChange={(e) => setPegawaiName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-gray-300 text-xs text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
+                  className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
                 >
                   <option value="Ayu Lestari">Ayu Lestari - Perawat Pelaksana</option>
                   <option value="Bima Pratama">Bima Pratama - Dokter Umum</option>
@@ -240,7 +251,7 @@ export default function KelolaJadwalPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[#202020]">Tanggal Penugasan</label>
                   <input
@@ -248,7 +259,7 @@ export default function KelolaJadwalPage() {
                     required
                     value={scheduleDate}
                     onChange={(e) => setScheduleDate(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
+                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
                   />
                 </div>
                 <div className="space-y-1">
@@ -256,7 +267,7 @@ export default function KelolaJadwalPage() {
                   <select
                     value={scheduleShift}
                     onChange={(e) => setScheduleShift(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
+                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
                   >
                     <option value="Shift Pagi">Shift Pagi (07.00–14.00)</option>
                     <option value="Shift Siang">Shift Siang (14.00–21.00)</option>
@@ -272,23 +283,23 @@ export default function KelolaJadwalPage() {
                   value={scheduleNotes}
                   onChange={(e) => setScheduleNotes(e.target.value)}
                   placeholder="Contoh: Bertugas di Ruang Isolasi / Kamar 301-310..."
-                  className="w-full p-2.5 rounded-xl border border-gray-300 text-xs text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none resize-none"
+                  className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex gap-3 pt-3">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 px-4 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white font-semibold text-sm transition-colors cursor-pointer"
-                >
-                  Terbitkan Jadwal
-                </button>
+              <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-5 py-3 rounded-xl border border-gray-200 text-[#3F3F3F] hover:bg-gray-50 text-sm font-medium transition-colors cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-gray-200 text-[#3F3F3F] hover:bg-gray-50 text-xs sm:text-sm font-medium transition-colors cursor-pointer"
                 >
                   Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
+                >
+                  Terbitkan Jadwal
                 </button>
               </div>
             </form>

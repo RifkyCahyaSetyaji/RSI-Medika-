@@ -16,9 +16,11 @@ import {
   User,
   LogOut,
   CheckSquare,
+  X,
 } from "lucide-react";
 import { useAuth, UserRole } from "@/shared/providers/auth-provider";
 import { LogoutModal } from "@/shared/components/modals/logout-modal";
+import { useSidebarContext } from "./sidebar-context";
 import { cn } from "@/shared/lib/utils";
 
 interface NavItem {
@@ -31,6 +33,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { role, logout } = useAuth();
   const [showLogout, setShowLogout] = useState(false);
+  const { isOpen, closeSidebar } = useSidebarContext();
 
   // Dynamic navigation items based on active role
   const getNavItems = (currentRole: UserRole): NavItem[] => {
@@ -71,14 +74,18 @@ export function Sidebar() {
 
   const navItems = getNavItems(role);
 
-  return (
-    <>
-      <aside className="w-64 min-w-64 bg-white rounded-[28px] p-6 shadow-sm border border-black/5 flex flex-col justify-between shrink-0 my-3 ml-3 min-h-[calc(100vh-24px)]">
-        {/* Top: Logo & Nav items */}
-        <div className="space-y-8">
-          {/* Brand header */}
-          <Link href="/dashboard" className="flex items-center gap-3 px-2 group">
-            <div className="relative w-11 h-11 shrink-0">
+  const sidebarContent = (
+    <div className="flex flex-col justify-between h-full">
+      {/* Top: Logo & Nav items */}
+      <div className="space-y-6 sm:space-y-8">
+        {/* Brand header with mobile close button */}
+        <div className="flex items-center justify-between px-2">
+          <Link
+            href="/dashboard"
+            onClick={closeSidebar}
+            className="flex items-center gap-3 group"
+          >
+            <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0">
               <Image
                 src="/images/medika-logo.png"
                 alt="Medika Logo"
@@ -88,69 +95,112 @@ export function Sidebar() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="font-bold text-xl leading-tight text-[#202020] tracking-tight">
+              <span className="font-bold text-lg sm:text-xl leading-tight text-[#202020] tracking-tight">
                 Medika
               </span>
-              <span className="text-xs text-[#5F5F5F] font-normal leading-tight">
+              <span className="text-[11px] sm:text-xs text-[#5F5F5F] font-normal leading-tight">
                 Portal Rumah Sakit
               </span>
             </div>
           </Link>
 
-          {/* Navigation Links */}
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3.5 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-150",
-                    isActive
-                      ? "bg-[#4731B6] text-white shadow-sm"
-                      : "text-[#3F3F3F] hover:bg-gray-100 hover:text-[#202020]"
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "w-5 h-5 shrink-0 transition-colors",
-                      isActive ? "text-white" : "text-[#3F3F3F]"
-                    )}
-                  />
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Bottom: Profil & Logout buttons */}
-        <div className="space-y-3 pt-6 border-t border-gray-100">
-          <Link
-            href="/profil"
-            className={cn(
-              "flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl text-sm font-medium transition-all",
-              pathname === "/profil"
-                ? "bg-[#4731B6] text-white"
-                : "border border-gray-200 text-[#3F3F3F] hover:bg-gray-50"
-            )}
-          >
-            <User className="w-4 h-4 shrink-0" />
-            <span>Profil</span>
-          </Link>
-
+          {/* Close button on mobile */}
           <button
             type="button"
-            onClick={() => setShowLogout(true)}
-            className="flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl bg-[#9A2500] hover:bg-[#801F00] text-white text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+            onClick={closeSidebar}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 lg:hidden cursor-pointer"
+            aria-label="Tutup menu"
           >
-            <LogOut className="w-4 h-4 shrink-0" />
-            <span>Keluar</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Navigation Links */}
+        <nav className="space-y-1.5 sm:space-y-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeSidebar}
+                className={cn(
+                  "flex items-center gap-3.5 px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-[#4731B6] text-white shadow-sm"
+                    : "text-[#3F3F3F] hover:bg-gray-100 hover:text-[#202020]"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "w-5 h-5 shrink-0 transition-colors",
+                    isActive ? "text-white" : "text-[#3F3F3F]"
+                  )}
+                />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Bottom: Profil & Logout buttons */}
+      <div className="space-y-2.5 sm:space-y-3 pt-4 sm:pt-6 border-t border-gray-100">
+        <Link
+          href="/profil"
+          onClick={closeSidebar}
+          className={cn(
+            "flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium transition-all",
+            pathname === "/profil"
+              ? "bg-[#4731B6] text-white"
+              : "border border-gray-200 text-[#3F3F3F] hover:bg-gray-50"
+          )}
+        >
+          <User className="w-4 h-4 shrink-0" />
+          <span>Profil</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => {
+            closeSidebar();
+            setShowLogout(true);
+          }}
+          className="flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl bg-[#9A2500] hover:bg-[#801F00] text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span>Keluar</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {/* Mobile Drawer Overlay Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs lg:hidden transition-opacity"
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile Drawer Sidebar */}
+      <aside
+        className={cn(
+          "fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white p-5 shadow-2xl transition-transform duration-300 ease-in-out lg:hidden flex flex-col justify-between overflow-y-auto",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop Fixed Sidebar */}
+      <aside className="hidden lg:flex w-64 min-w-64 bg-white rounded-[28px] p-6 shadow-sm border border-black/5 flex-col justify-between shrink-0 my-3 ml-3 min-h-[calc(100vh-24px)]">
+        {sidebarContent}
       </aside>
 
       <LogoutModal
