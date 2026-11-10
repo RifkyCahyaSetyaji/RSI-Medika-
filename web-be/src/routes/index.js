@@ -9,6 +9,9 @@ import absensiRoutes from './absensi.routes.js';
 import koreksiAbsensiRoutes from './koreksiAbsensi.routes.js';
 import cutiRoutes from './cuti.routes.js';
 import izinRoutes from './izin.routes.js';
+import pedomanGajiRoutes from './pedomanGaji.routes.js';
+import penggajianRoutes from './penggajian.routes.js';
+import bandingGajiRoutes from './bandingGaji.routes.js';
 
 const router = Router();
 
@@ -23,6 +26,9 @@ router.use('/absensi', absensiRoutes);
 router.use('/koreksi-absensi', koreksiAbsensiRoutes);
 router.use('/cuti', cutiRoutes);
 router.use('/izin', izinRoutes);
+router.use('/pedoman-gaji', pedomanGajiRoutes);
+router.use('/penggajian', penggajianRoutes);
+router.use('/banding-gaji', bandingGajiRoutes);
 
 // Daftarkan route modul lain di sini, contoh:
 // router.use('/pasien', pasienRoutes);
