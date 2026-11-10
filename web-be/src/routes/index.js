@@ -7,6 +7,8 @@ import jadwalRoutes from './jadwal.routes.js';
 import pengajuanJadwalRoutes from './pengajuanJadwal.routes.js';
 import absensiRoutes from './absensi.routes.js';
 import koreksiAbsensiRoutes from './koreksiAbsensi.routes.js';
+import cutiRoutes from './cuti.routes.js';
+import izinRoutes from './izin.routes.js';
 
 const router = Router();
 
@@ -19,6 +21,8 @@ router.use('/jadwal', jadwalRoutes);
 router.use('/pengajuan-jadwal', pengajuanJadwalRoutes);
 router.use('/absensi', absensiRoutes);
 router.use('/koreksi-absensi', koreksiAbsensiRoutes);
+router.use('/cuti', cutiRoutes);
+router.use('/izin', izinRoutes);
 
 // Daftarkan route modul lain di sini, contoh:
 // router.use('/pasien', pasienRoutes);

@@ -22,7 +22,13 @@ export const KEHADIRAN = Object.freeze({
   HADIR: 'Hadir',
   TERLAMBAT: 'Terlambat',
   TIDAK_HADIR: 'Tidak Hadir',
+  CUTI: 'Cuti',
+  IZIN: 'Izin',
+  SAKIT: 'Sakit',
 });
+
+/** Status dari pengajuan cuti/izin yang disetujui (tanpa absen masuk, tapi bukan alpa). */
+export const KEHADIRAN_BERIZIN = [KEHADIRAN.CUTI, KEHADIRAN.IZIN, KEHADIRAN.SAKIT];
 
 export const PULANG = Object.freeze({
   TEPAT_WAKTU: 'Tepat Waktu',
@@ -71,7 +77,8 @@ export function barisRiwayat(jadwal, absensi, now = sekarang()) {
   let statusPulangTampil = absensi?.statusPulang ?? null;
 
   if (!absensi || !absensi.waktuMasuk) {
-    if (absensi?.statusKehadiran === KEHADIRAN.TIDAK_HADIR || now > b.selesai) status = KEHADIRAN.TIDAK_HADIR;
+    if (KEHADIRAN_BERIZIN.includes(absensi?.statusKehadiran)) status = absensi.statusKehadiran;
+    else if (absensi?.statusKehadiran === KEHADIRAN.TIDAK_HADIR || now > b.selesai) status = KEHADIRAN.TIDAK_HADIR;
     else status = now >= b.bukaMasuk ? 'Belum Absen' : 'Akan Datang';
   } else {
     status = absensi.statusKehadiran;
@@ -108,7 +115,7 @@ export function barisRiwayat(jadwal, absensi, now = sekarang()) {
     statusKehadiran: status,
     statusPulang: statusPulangTampil,
     // status ringkas untuk badge di frontend
-    status: status === KEHADIRAN.TIDAK_HADIR || !absensi?.waktuMasuk ? status
+    status: !absensi?.waktuMasuk ? status
       : statusPulangTampil === PULANG.BELUM || statusPulangTampil === PULANG.TIDAK_ABSEN ? statusPulangTampil
       : status,
   };

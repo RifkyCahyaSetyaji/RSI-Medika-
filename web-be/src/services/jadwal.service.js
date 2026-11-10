@@ -74,16 +74,29 @@ export async function validasiJadwal(pegawai, slot, { kecualiIdJadwal } = {}) {
     throw new ApiError(400, 'Tidak bisa membuat jadwal untuk tanggal yang sudah lewat');
   }
 
-  const cuti = await prisma.pengajuan_cuti.findFirst({
-    where: {
-      idPegawai: pegawai.idPegawai,
-      tanggalMulai: { lte: slot.tanggal },
-      tanggalSelesai: { gte: slot.tanggal },
-      OR: [{ status: STATUS_DISETUJUI }, { keputusan: STATUS_DISETUJUI }],
-    },
-  });
+  const [cuti, izin] = await Promise.all([
+    prisma.pengajuan_cuti.findFirst({
+      where: {
+        idPegawai: pegawai.idPegawai,
+        tanggalMulai: { lte: slot.tanggal },
+        tanggalSelesai: { gte: slot.tanggal },
+        OR: [{ status: STATUS_DISETUJUI }, { keputusan: STATUS_DISETUJUI }],
+      },
+    }),
+    prisma.pengajuan_ketidakhadiran.findFirst({
+      where: {
+        idPegawai: pegawai.idPegawai,
+        tanggalMulai: { lte: slot.tanggal },
+        tanggalSelesai: { gte: slot.tanggal },
+        status: STATUS_DISETUJUI,
+      },
+    }),
+  ]);
   if (cuti) {
     throw new ApiError(400, `${pegawai.nama} sedang cuti pada ${formatTanggal(slot.tanggal)}`);
+  }
+  if (izin) {
+    throw new ApiError(400, `${pegawai.nama} sedang ${izin.jenis.toLowerCase()} pada ${formatTanggal(slot.tanggal)}`);
   }
 
   // Shift malam bisa menyeberang ke hari berikutnya -> cek H-1 s/d H+1
