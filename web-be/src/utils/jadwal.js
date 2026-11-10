@@ -2,6 +2,7 @@
  * Konfigurasi & helper waktu untuk penjadwalan.
  * Kolom DATE/TIME di Prisma dibaca sebagai Date UTC, jadi semua hitungan di sini memakai UTC.
  */
+import 'dotenv/config';
 
 /** Shift untuk tenaga medis non dokter spesialis. Malam melewati tengah malam. */
 export const SHIFT = Object.freeze({
@@ -58,10 +59,17 @@ export const formatTanggal = (d) => d.toISOString().slice(0, 10);
 export const formatJam = (d) => d.toISOString().slice(11, 16);
 const menitDariJam = (d) => d.getUTCHours() * 60 + d.getUTCMinutes();
 
-/** Hari ini (tanggal lokal server) sebagai Date UTC tengah malam. */
+/**
+ * Waktu "dinding" RS (default WIB, UTC+7) direpresentasikan sebagai Date UTC,
+ * konsisten dengan kolom DATE/TIME/TIMESTAMP (tanpa zona waktu) di database.
+ */
+const OFFSET_MENIT = Number(process.env.APP_TZ_OFFSET_MINUTES ?? 420);
+export const sekarang = () => new Date(Date.now() + OFFSET_MENIT * 60000);
+
+/** Hari ini (tanggal lokal RS) sebagai Date UTC tengah malam. */
 export function hariIni() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const now = sekarang();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
 export const tambahHari = (d, n) => new Date(d.getTime() + n * MS_SEHARI);
