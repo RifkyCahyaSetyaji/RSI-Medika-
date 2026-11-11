@@ -1,6 +1,6 @@
 import { Router } from 'express';
 
-import { buatAkunHrd, daftarAkunHrd } from '../controllers/admin.controller.js';
+import { buatAkunHrd, daftarAkunHrd } from '../controllers/akun.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { ROLES } from '../utils/roles.js';
 
@@ -12,4 +12,3 @@ router.get('/akun-hrd', daftarAkunHrd);
 router.post('/akun-hrd', buatAkunHrd);
 
 export default router;
-

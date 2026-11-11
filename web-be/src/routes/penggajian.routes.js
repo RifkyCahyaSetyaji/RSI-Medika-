@@ -1,18 +1,22 @@
 import { Router } from 'express';
 
 import {
-  bayarGaji,
-  bayarGajiBulk,
   daftarGaji,
   detailGaji,
   gajiSaya,
-  hapusRekening,
   hitungGajiBulk,
   hitungGajiPegawai,
-  rekeningSaya,
-  riwayatTransaksi,
-  tambahRekening,
 } from '../controllers/penggajian.controller.js';
+import {
+  bayarGaji,
+  bayarGajiBulk,
+  riwayatTransaksi,
+} from '../controllers/pembayaranGaji.controller.js';
+import {
+  hapusRekening,
+  rekeningSaya,
+  tambahRekening,
+} from '../controllers/rekening.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { ROLES } from '../utils/roles.js';
 
@@ -45,4 +49,3 @@ router.post('/:idGaji/bayar', pengelola, bayarGaji);
 router.get('/:idGaji', detailGaji);
 
 export default router;
-

@@ -1,12 +1,7 @@
 import { Router } from 'express';
 
-import {
-  buatAkun,
-  daftarPeran,
-  pegawaiTanpaAkun,
-  tambahPeran,
-  ubahPeranPegawai,
-} from '../controllers/hrd.controller.js';
+import { buatAkun, pegawaiTanpaAkun } from '../controllers/akun.controller.js';
+import { daftarPeran, tambahPeran, ubahPeranPegawai } from '../controllers/peran.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.js';
 import { ROLES } from '../utils/roles.js';
 
@@ -22,4 +17,3 @@ router.post('/peran', tambahPeran);
 router.patch('/pegawai/:idPegawai/peran', ubahPeranPegawai);
 
 export default router;
-

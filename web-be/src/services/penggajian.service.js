@@ -19,6 +19,21 @@ export const STATUS_BANDING = Object.freeze({
   DIBATALKAN: 'Dibatalkan',
 });
 
+export const includeGaji = {
+  pegawai: {
+    select: {
+      idPegawai: true,
+      nama: true,
+      nip: true,
+      jabatan: true,
+      unitKerja: true,
+      peran_tenaga_medis: { select: { idPeran: true, namaPeran: true, kategori: true } },
+      rekening_pegawai: true,
+    },
+  },
+  pedoman_penggajian: true,
+};
+
 const num = (v) => Number(v ?? 0);
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
@@ -54,12 +69,7 @@ export async function cariPedomanBerlaku(idPeran, periode, client = prisma) {
 
 /**
  * Rekap otomatis kehadiran & lembur pegawai pada satu periode ('YYYY-MM')
- * dari tabel jadwal + absensi:
- * - hariHadir: jadwal reguler yang dihadiri (Hadir / Terlambat)
- * - jumlahTerlambat: jadwal yang statusKehadiran = 'Terlambat'
- * - jumlahShiftMalam: jadwal reguler Shift Malam yang dihadiri
- * - jamLembur: total jam dari jadwal lembur yang dihadiri (aktual masuk-pulang atau durasi jadwal)
- * - hariAlpa: jadwal reguler yang sudah lewat tanpa kehadiran dan bukan Cuti/Izin/Sakit
+ * dari tabel jadwal + absensi.
  */
 export async function rekapKehadiranBulanan(idPegawai, periode, client = prisma) {
   const { awal, akhir } = rentangPeriode(periode);
@@ -114,9 +124,7 @@ export async function rekapKehadiranBulanan(idPegawai, periode, client = prisma)
   };
 }
 
-/**
- * Hitung rincian komponen gaji sesuai rumus fungsi SQL `hitung_gaji_tenaga_medis`.
- */
+/** Hitung rincian komponen gaji sesuai rumus fungsi SQL `hitung_gaji_tenaga_medis`. */
 export function hitungKomponenGaji(pedoman, metrik = {}) {
   const jumlahShiftMalam = Math.max(0, Number(metrik.jumlahShiftMalam ?? 0));
   const jamLembur = Math.max(0, Number(metrik.jamLembur ?? 0));
@@ -169,7 +177,6 @@ export function hitungKomponenGaji(pedoman, metrik = {}) {
   };
 }
 
-/** Ubah field Decimal Prisma pada pedoman_penggajian menjadi Number. */
 export function serializePedoman(p) {
   if (!p) return null;
   return {
@@ -187,7 +194,6 @@ export function serializePedoman(p) {
   };
 }
 
-/** Ubah field Decimal pada record penggajian menjadi Number. */
 export function serializeGaji(g, ekstra = {}) {
   if (!g) return null;
   const gajiPokok = num(g.gajiPokok);
@@ -206,3 +212,84 @@ export function serializeGaji(g, ekstra = {}) {
   };
 }
 
+/** Susun rincian lengkap slip gaji (metrik absensi + rincian tunjangan & potongan). */
+export async function susunRincianSlip(gaji) {
+  const metrik = await rekapKehadiranBulanan(gaji.idPegawai, gaji.periodeGaji);
+  const pedoman =
+    gaji.pedoman_penggajian ?? (await cariPedomanBerlaku(gaji.pegawai?.peran_tenaga_medis?.idPeran, gaji.periodeGaji));
+
+  let rincian = null;
+  if (pedoman) {
+    const dasar = hitungKomponenGaji(pedoman, metrik);
+    const selisihTunjangan = Number(gaji.tunjangan) - dasar.tunjangan;
+    const selisihPotongan = Number(gaji.potongan) - dasar.potongan;
+    rincian = hitungKomponenGaji(pedoman, {
+      ...metrik,
+      tunjanganTambahan: selisihTunjangan,
+      potonganTambahan: selisihPotongan,
+    });
+  }
+
+  return serializeGaji(gaji, {
+    metrikKehadiran: metrik,
+    rincianTunjangan: rincian?.rincianTunjangan ?? null,
+    rincianPotongan: rincian?.rincianPotongan ?? null,
+  });
+}
+
+/** Hitung & simpan (upsert) gaji 1 pegawai untuk suatu periode. */
+export async function prosesHitungPegawai(pegawai, periode, inputManual = {}) {
+  if (!pegawai.idPeran) {
+    throw new ApiError(400, `Pegawai ${pegawai.nama} belum memiliki peran tenaga medis (idPeran kosong)`);
+  }
+  const pedoman = await cariPedomanBerlaku(pegawai.idPeran, periode);
+  if (!pedoman) {
+    throw new ApiError(
+      400,
+      `Belum ada pedoman penggajian yang berlaku untuk peran ${pegawai.peran_tenaga_medis?.namaPeran ?? pegawai.idPeran} pada periode ${periode}`,
+    );
+  }
+
+  const existing = await prisma.penggajian.findFirst({
+    where: { idPegawai: pegawai.idPegawai, periodeGaji: periode },
+  });
+  if (existing?.statusPembayaran === STATUS_PEMBAYARAN.TERBAYAR) {
+    throw new ApiError(409, `Gaji ${pegawai.nama} periode ${periode} sudah berstatus Terbayar dan tidak bisa dihitung ulang`);
+  }
+
+  const otomatis = await rekapKehadiranBulanan(pegawai.idPegawai, periode);
+  const metrik = {
+    ...otomatis,
+    ...(inputManual.jumlahShiftMalam != null && { jumlahShiftMalam: inputManual.jumlahShiftMalam }),
+    ...(inputManual.jamLembur != null && { jamLembur: inputManual.jamLembur }),
+    ...(inputManual.hariHadir != null && { hariHadir: inputManual.hariHadir }),
+    ...(inputManual.hariAlpa != null && { hariAlpa: inputManual.hariAlpa }),
+    ...(inputManual.jumlahTerlambat != null && { jumlahTerlambat: inputManual.jumlahTerlambat }),
+    nilaiJasaMedis: inputManual.nilaiJasaMedis ?? 0,
+    tunjanganTambahan: inputManual.tunjanganTambahan ?? 0,
+    potonganTambahan: inputManual.potonganTambahan ?? 0,
+  };
+
+  const hasil = hitungKomponenGaji(pedoman, metrik);
+
+  const payload = {
+    idPegawai: pegawai.idPegawai,
+    periodeGaji: periode,
+    idPedoman: pedoman.idPedoman,
+    gajiPokok: hasil.gajiPokok,
+    tunjangan: hasil.tunjangan,
+    potongan: hasil.potongan,
+    totalGaji: hasil.totalGaji,
+    statusPembayaran: existing?.statusPembayaran ?? STATUS_PEMBAYARAN.BELUM_DIBAYAR,
+  };
+
+  const record = existing
+    ? await prisma.penggajian.update({ where: { idGaji: existing.idGaji }, data: payload, include: includeGaji })
+    : await prisma.penggajian.create({ data: payload, include: includeGaji });
+
+  return serializeGaji(record, {
+    metrikKehadiran: metrik,
+    rincianTunjangan: hasil.rincianTunjangan,
+    rincianPotongan: hasil.rincianPotongan,
+  });
+}
