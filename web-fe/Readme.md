@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🩺 RSI Medika — Frontend (`web-fe`)
 
-## Getting Started
+Aplikasi antarmuka web (frontend) untuk Sistem Manajemen & HRIS **RSI Medika**, dibangun menggunakan **Next.js 16 (App Router)**, **React 19**, **TypeScript**, dan **Tailwind CSS v4**.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🏛️ Arsitektur Folder (`src/`)
+
+Frontend menerapkan *Feature-Driven Architecture* untuk menjaga skalabilitas dan keteraturan kode:
+
+```
+src/
+├── app/                 # Next.js App Router (Hanya routing & layout composition)
+│   ├── (dashboard)/     # Rute terproteksi dashboard per peran:
+│   │   ├── hrd/         # Halaman manajemen SDM, absensi, gaji, pedoman
+│   │   ├── keuangan/    # Halaman payroll, pedoman tarif, aju banding
+│   │   ├── sekretaris/  # Halaman kelola jadwal shift & presensi unit
+│   │   └── tenaga-medis/# Halaman jadwal pribadi, absensi, rincian slip gaji
+│   ├── (public)/        # Rute publik (login, dll.)
+│   ├── layout.tsx       # Root layout & providers
+│   └── globals.css      # Styling Tailwind CSS v4
+│
+├── features/            # Modul domain bisnis mandiri (Feature-driven)
+│   ├── auth/            # Otentikasi & session context
+│   ├── dashboard/       # Statistik & widget ringkasan
+│   ├── dokter/          # Domain fungsional dokter
+│   ├── farmasi/         # Domain farmasi & obat
+│   ├── janji-temu/      # Penjadwalan konsultasi & janji temu
+│   ├── pasien/          # Manajemen data pasien
+│   └── rekam-medis/     # Rekam medis elektronik
+│
+├── shared/              # Komponen & utilitas yang dapat digunakan ulang lintas domain
+│   ├── components/      # UI primitives & komponen layout (Sidebar, Header, Breadcrumb)
+│   ├── hooks/           # Custom React hooks bersama
+│   ├── lib/             # Helper fungsi (formatters, styling helpers)
+│   ├── providers/       # Context Providers (AuthProvider, dll.)
+│   ├── services/        # Service API client
+│   └── types/           # Definisi tipe TypeScript global & peran pengguna
+└── assets/              # Aset statis (font, ikon, gambar khusus)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📐 Aturan Pengembangan (Hard Rules)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Sesuai dokumen arsitektur di `docs/architecture.md`:
+1. **Composition Only**: Direktori `src/app/` hanya bertanggung jawab terhadap rute, meta tags, dan komposisi kontainer feature.
+2. **Feature Isolation**: Modul dalam `src/features/<feature>/` **tidak boleh** mengimpor langsung dari feature lain.
+3. **Shared Abstraction**: Komponen, hooks, atau utilitas yang dipakai lebih dari satu domain wajib diletakkan di `src/shared/`.
+4. **Shared Independence**: Kode di dalam `src/shared/` **tidak boleh** mengimpor apa pun dari dalam `src/features/`.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Memulai Pengembangan
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Pastikan dependensi telah terinstal:
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Buat konfigurasi `.env.local` jika diperlukan integrasi ke backend API:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
 
-## Deploy on Vercel
+3. Jalankan server pengembangan (Turbopack):
+   ```bash
+   npm run dev
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Buka [http://localhost:3000](http://localhost:3000) di browser Anda.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 📜 Perintah Tersedia
+
+- `npm run dev` — Menjalankan dev server Next.js dengan Turbopack.
+- `npm run build` — Membuat build produksi aplikasi.
+- `npm run start` — Menjalankan build produksi di server lokal.
+- `npm run lint` — Menjalankan ESLint untuk memeriksa kualitas kode.
+
+---
+
+Untuk dokumentasi lengkap ekosistem RSI Medika, silakan lihat [README Utama Proyek](../Readme.md).

@@ -1,12 +1,43 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useAuth, UserRole } from "@/shared/providers/auth-provider";
+import { useAuth, UserRole, PATH_TO_ROLE } from "@/shared/providers/auth-provider";
 import { ChevronDown, Sparkles, Menu } from "lucide-react";
 import { useSidebarContext } from "./sidebar-context";
 
 const TITLE_MAP: Record<string, string> = {
+  // Tenaga Medis
+  "/tenaga-medis/dashboard": "Beranda",
+  "/tenaga-medis/jadwal": "Jadwal Kerja",
+  "/tenaga-medis/absensi": "Absensi",
+  "/tenaga-medis/gaji": "Gaji",
+  "/tenaga-medis/profil": "Profil",
+
+  // HRD
+  "/hrd/dashboard": "Beranda",
+  "/hrd/kepegawaian": "Kepegawaian",
+  "/hrd/aju-banding": "Aju Banding",
+  "/hrd/absensi": "Rekap Absensi Pegawai",
+  "/hrd/pedoman-gaji": "Pedoman Gaji",
+  "/hrd/gaji": "Gaji",
+  "/hrd/profil": "Profil",
+
+  // Sekretaris
+  "/sekretaris/dashboard": "Beranda",
+  "/sekretaris/jadwal": "Kelola Jadwal Unit",
+  "/sekretaris/absensi": "Pengajuan Absensi",
+  "/sekretaris/gaji": "Gaji",
+  "/sekretaris/profil": "Profil",
+
+  // Keuangan
+  "/keuangan/dashboard": "Beranda",
+  "/keuangan/kelola-gaji": "Kelola Gaji",
+  "/keuangan/aju-banding": "Aju Banding",
+  "/keuangan/pedoman-gaji": "Pedoman Gaji",
+  "/keuangan/profil": "Profil",
+
+  // Fallbacks
   "/dashboard": "Beranda",
   "/jadwal": "Jadwal Kerja",
   "/kelola-jadwal": "Kelola Jadwal",
@@ -24,6 +55,17 @@ export function HeaderBreadcrumb() {
   const { role, switchRole } = useAuth();
   const { toggleSidebar } = useSidebarContext();
   const currentTitle = TITLE_MAP[pathname] || "Dashboard";
+
+  // Automatically sync role if user navigates to another role's route prefix
+  useEffect(() => {
+    const segments = pathname.split("/").filter(Boolean);
+    if (segments.length > 0) {
+      const detectedRole = PATH_TO_ROLE[segments[0]];
+      if (detectedRole && detectedRole !== role) {
+        switchRole(detectedRole, false);
+      }
+    }
+  }, [pathname, role, switchRole]);
 
   return (
     <div className="w-full bg-white rounded-2xl px-3.5 sm:px-6 py-2.5 sm:py-3 shadow-xs border border-black/5 flex items-center justify-between gap-2 sm:gap-4">

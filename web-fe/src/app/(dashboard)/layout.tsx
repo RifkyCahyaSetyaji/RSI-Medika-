@@ -28,9 +28,9 @@ export default function DashboardLayout({
         {/* Responsive Sidebar (Drawer on mobile/tablet, Fixed on desktop) */}
         <Sidebar />
 
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 p-3 sm:p-4 lg:p-3 lg:pl-2 overflow-y-auto max-h-screen">
-          <div className="space-y-4 pb-12 sm:pb-16 pr-0 lg:pr-1">
+        {/* Main Content Area with generous gap from sidebar */}
+        <main className="flex-1 flex flex-col min-w-0 p-3.5 sm:p-5 lg:py-4 lg:pr-6 lg:pl-6 xl:pl-8 overflow-y-auto max-h-screen">
+          <div className="space-y-5 pb-12 sm:pb-16">
             <HeaderBreadcrumb />
             <div className="animate-in fade-in duration-200">{children}</div>
           </div>

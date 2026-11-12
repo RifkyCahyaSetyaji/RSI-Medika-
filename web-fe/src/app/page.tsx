@@ -2,19 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/shared/providers/auth-provider";
+import { useAuth, ROLE_PATHS } from "@/shared/providers/auth-provider";
 
 export default function RootPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, role } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace("/dashboard");
+      router.replace(`/${ROLE_PATHS[role]}/dashboard`);
     } else {
       router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, role, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#ECECEC]">

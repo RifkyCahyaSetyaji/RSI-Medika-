@@ -18,7 +18,7 @@ import {
   CheckSquare,
   X,
 } from "lucide-react";
-import { useAuth, UserRole } from "@/shared/providers/auth-provider";
+import { useAuth, UserRole, ROLE_PATHS } from "@/shared/providers/auth-provider";
 import { LogoutModal } from "@/shared/components/modals/logout-modal";
 import { useSidebarContext } from "./sidebar-context";
 import { cn } from "@/shared/lib/utils";
@@ -35,44 +35,46 @@ export function Sidebar() {
   const [showLogout, setShowLogout] = useState(false);
   const { isOpen, closeSidebar } = useSidebarContext();
 
-  // Dynamic navigation items based on active role
+  // Dynamic navigation items based on active role separated with role prefix
   const getNavItems = (currentRole: UserRole): NavItem[] => {
     switch (currentRole) {
       case "HRD":
         return [
-          { label: "Beranda", href: "/dashboard", icon: Home },
-          { label: "Kepegawaian", href: "/kepegawaian", icon: Users },
-          { label: "Aju Banding", href: "/aju-banding", icon: FileText },
-          { label: "Absensi", href: "/rekap-absensi", icon: Clock },
-          { label: "Pedoman Gaji", href: "/pedoman-gaji", icon: BookOpen },
-          { label: "Gaji", href: "/gaji", icon: Mail },
+          { label: "Beranda", href: "/hrd/dashboard", icon: Home },
+          { label: "Kepegawaian", href: "/hrd/kepegawaian", icon: Users },
+          { label: "Aju Banding", href: "/hrd/aju-banding", icon: FileText },
+          { label: "Absensi", href: "/hrd/absensi", icon: Clock },
+          { label: "Pedoman Gaji", href: "/hrd/pedoman-gaji", icon: BookOpen },
+          { label: "Gaji", href: "/hrd/gaji", icon: Mail },
         ];
       case "SEKRETARIS":
         return [
-          { label: "Beranda", href: "/dashboard", icon: Home },
-          { label: "Jadwal", href: "/kelola-jadwal", icon: Calendar },
-          { label: "Pengajuan Absensi", href: "/absensi", icon: CheckSquare },
-          { label: "Gaji", href: "/gaji", icon: Mail },
+          { label: "Beranda", href: "/sekretaris/dashboard", icon: Home },
+          { label: "Jadwal", href: "/sekretaris/jadwal", icon: Calendar },
+          { label: "Pengajuan Absensi", href: "/sekretaris/absensi", icon: CheckSquare },
+          { label: "Gaji", href: "/sekretaris/gaji", icon: Mail },
         ];
       case "KEUANGAN":
         return [
-          { label: "Beranda", href: "/dashboard", icon: Home },
-          { label: "Aju Banding", href: "/aju-banding", icon: FileText },
-          { label: "Pedoman Gaji", href: "/pedoman-gaji", icon: BookOpen },
-          { label: "Kelola Gaji", href: "/gaji", icon: Mail },
+          { label: "Beranda", href: "/keuangan/dashboard", icon: Home },
+          { label: "Kelola Gaji", href: "/keuangan/kelola-gaji", icon: Mail },
+          { label: "Aju Banding", href: "/keuangan/aju-banding", icon: FileText },
+          { label: "Pedoman Gaji", href: "/keuangan/pedoman-gaji", icon: BookOpen },
         ];
       case "TENAGA_MEDIS":
       default:
         return [
-          { label: "Beranda", href: "/dashboard", icon: Home },
-          { label: "Jadwal", href: "/jadwal", icon: Calendar },
-          { label: "Absensi", href: "/absensi", icon: Fingerprint },
-          { label: "Gaji", href: "/gaji", icon: Mail },
+          { label: "Beranda", href: "/tenaga-medis/dashboard", icon: Home },
+          { label: "Jadwal", href: "/tenaga-medis/jadwal", icon: Calendar },
+          { label: "Absensi", href: "/tenaga-medis/absensi", icon: Fingerprint },
+          { label: "Gaji", href: "/tenaga-medis/gaji", icon: Mail },
         ];
     }
   };
 
   const navItems = getNavItems(role);
+  const homeHref = `/${ROLE_PATHS[role]}/dashboard`;
+  const profilHref = `/${ROLE_PATHS[role]}/profil`;
 
   const sidebarContent = (
     <div className="flex flex-col justify-between h-full">
@@ -81,7 +83,7 @@ export function Sidebar() {
         {/* Brand header with mobile close button */}
         <div className="flex items-center justify-between px-2">
           <Link
-            href="/dashboard"
+            href={homeHref}
             onClick={closeSidebar}
             className="flex items-center gap-3 group"
           >
@@ -149,11 +151,11 @@ export function Sidebar() {
       {/* Bottom: Profil & Logout buttons */}
       <div className="space-y-2.5 sm:space-y-3 pt-4 sm:pt-6 border-t border-gray-100">
         <Link
-          href="/profil"
+          href={profilHref}
           onClick={closeSidebar}
           className={cn(
             "flex items-center justify-center gap-2.5 w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium transition-all",
-            pathname === "/profil"
+            pathname === profilHref
               ? "bg-[#4731B6] text-white"
               : "border border-gray-200 text-[#3F3F3F] hover:bg-gray-50"
           )}
@@ -199,7 +201,7 @@ export function Sidebar() {
       </aside>
 
       {/* Desktop Fixed Sidebar */}
-      <aside className="hidden lg:flex w-64 min-w-64 bg-white rounded-[28px] p-6 shadow-sm border border-black/5 flex-col justify-between shrink-0 my-3 ml-3 min-h-[calc(100vh-24px)]">
+      <aside className="hidden lg:flex w-64 min-w-64 bg-white rounded-[28px] p-6 shadow-xs border border-black/5 flex-col justify-between shrink-0 my-4 ml-4 lg:ml-5 h-[calc(100vh-32px)] sticky top-4">
         {sidebarContent}
       </aside>
 

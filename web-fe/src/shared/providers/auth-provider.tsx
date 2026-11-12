@@ -5,6 +5,20 @@ import { useRouter } from "next/navigation";
 
 export type UserRole = "TENAGA_MEDIS" | "HRD" | "SEKRETARIS" | "KEUANGAN";
 
+export const ROLE_PATHS: Record<UserRole, string> = {
+  TENAGA_MEDIS: "tenaga-medis",
+  HRD: "hrd",
+  SEKRETARIS: "sekretaris",
+  KEUANGAN: "keuangan",
+};
+
+export const PATH_TO_ROLE: Record<string, UserRole> = {
+  "tenaga-medis": "TENAGA_MEDIS",
+  "hrd": "HRD",
+  "sekretaris": "SEKRETARIS",
+  "keuangan": "KEUANGAN",
+};
+
 export interface UserProfile {
   nip: string;
   nama: string;
@@ -60,7 +74,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (role?: UserRole) => void;
   logout: () => void;
-  switchRole: (role: UserRole) => void;
+  switchRole: (role: UserRole, navigate?: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,16 +100,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
   const router = useRouter();
 
-  const switchRole = (newRole: UserRole) => {
+  const switchRole = (newRole: UserRole, navigate = true) => {
     setRoleState(newRole);
     localStorage.setItem("medika_role", newRole);
     setIsAuthenticated(true);
     localStorage.setItem("medika_auth", "true");
+    if (navigate) {
+      router.push(`/${ROLE_PATHS[newRole]}/dashboard`);
+    }
   };
 
   const login = (newRole: UserRole = "TENAGA_MEDIS") => {
-    switchRole(newRole);
-    router.push("/dashboard");
+    switchRole(newRole, false);
+    router.push(`/${ROLE_PATHS[newRole]}/dashboard`);
   };
 
   const logout = () => {
