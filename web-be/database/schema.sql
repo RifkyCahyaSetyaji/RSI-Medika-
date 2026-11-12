@@ -68,9 +68,8 @@ CREATE TABLE IF NOT EXISTS akun (
               REFERENCES pegawai ("idPegawai") ON UPDATE CASCADE ON DELETE CASCADE,
   "username"  VARCHAR(50)  NOT NULL UNIQUE,
   "password"  VARCHAR(255) NOT NULL,   -- simpan HASH password (bcrypt), bukan plain text
-  "role"      VARCHAR(30)  NOT NULL
+  "role"      VARCHAR(30)  NOT NULL,
 );
-
 -- =====================================================================
 -- 3. JADWAL  (Pegawai 1 : Jadwal 0..*)
 -- =====================================================================

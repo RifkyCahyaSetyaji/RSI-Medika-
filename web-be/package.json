@@ -11,6 +11,7 @@
     "db:schema": "node scripts/run-sql.js database/schema.sql",
     "db:seed": "node scripts/run-sql.js database/seed.sql",
     "db:setup": "node scripts/run-sql.js database/schema.sql database/seed.sql",
+    "create:superadmin": "node scripts/create-superadmin.js",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
     "prisma:push": "prisma db push",
@@ -22,11 +23,14 @@
   "dependencies": {
     "@prisma/client": "^6.4.1",
     "@supabase/supabase-js": "^2.118.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
     "express": "^5.3.0",
     "helmet": "^8.3.0",
-    "morgan": "^1.12.1"
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.12.1",
+    "nodemailer": "^10.3.1"
   },
   "devDependencies": {
     "pg": "^8.23.1",
