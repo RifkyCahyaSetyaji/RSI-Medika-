@@ -94,7 +94,7 @@ Catatan:
 
   Hasilnya disimpan ke tabel `penggajian` (termasuk `idPedoman`).
 
-## Endpoint
+### Endpoint publik
 
 | Method | Path              | Keterangan                 |
 | ------ | ----------------- | -------------------------- |

@@ -13,6 +13,7 @@ Sistem Informasi Manajemen Rumah Sakit Terpadu untuk **RSI Medika**. Aplikasi in
 - [Peran Pengguna & Modul](#-peran-pengguna--modul)
 - [Struktur Database](#-struktur-database)
 - [Panduan Instalasi & Menjalankan](#-panduan-instalasi--menjalankan)
+  - [Menjalankan dengan Docker Compose](#menjalankan-dengan-docker-compose)
   - [Prasyarat](#prasyarat)
   - [Setup Backend (`web-be`)](#setup-backend-web-be)
   - [Setup Frontend (`web-fe`)](#setup-frontend-web-fe)
@@ -178,6 +179,32 @@ Database dibangun di PostgreSQL (Supabase) dengan skema relasional terpadu:
 ---
 
 ## 🛠️ Panduan Instalasi & Menjalankan
+
+### Menjalankan dengan Docker Compose
+
+Docker Compose menjalankan Next.js dan Express dalam dua container. Backend tetap memakai proyek Supabase yang dikonfigurasi di `web-be/.env`.
+
+1. Buka Docker Desktop dan tunggu sampai engine Linux aktif. Jalankan perintah berikut dari folder utama repositori.
+2. Jika `web-be/.env` belum ada, buat dari template dengan PowerShell berikut. Lengkapi konfigurasi Supabase, koneksi PostgreSQL, dan `JWT_SECRET` seperti pada setup backend. Schema database harus sudah tersedia untuk mencoba login dan endpoint yang memakai data pegawai.
+
+   ```powershell
+   if (-not (Test-Path web-be/.env)) {
+       Copy-Item web-be/.env.example web-be/.env
+   }
+   ```
+
+3. Build dan jalankan kedua container.
+
+   ```powershell
+   docker compose up --build -d
+   docker compose ps
+   ```
+
+4. Buka frontend di [http://localhost:3000](http://localhost:3000) dan cek API di [http://localhost:5000/api/health](http://localhost:5000/api/health). Di Postman, ubah `baseUrl` menjadi `http://localhost:5000`. Untuk mengetes login backend, kirim `POST /api/auth/login` dari Postman. Login yang ada di frontend masih menggunakan profil demo.
+
+Compose memakai port backend `5000`, origin frontend `http://localhost:3000`, dan URL frontend yang sama untuk tautan email. Jika salah satu port sudah dipakai, hentikan proses yang memakainya atau atur `FRONTEND_PORT` dan `BACKEND_PORT` di PowerShell sebelum menjalankan Compose, misalnya `$env:FRONTEND_PORT = '3001'` dan `$env:BACKEND_PORT = '5001'`.
+
+Gunakan `docker compose logs -f` untuk melihat log dan `docker compose down` untuk menghentikan kedua container. Jalankan kembali `docker compose up --build -d` setelah mengubah kode.
 
 ### Prasyarat
 - [Node.js](https://nodejs.org/) versi `>= 20.0.0`
