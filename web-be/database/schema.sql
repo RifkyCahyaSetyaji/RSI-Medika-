@@ -43,10 +43,10 @@ CREATE SEQUENCE IF NOT EXISTS seq_transaksi_pembayaran;
 -- 1. PEGAWAI
 -- =====================================================================
 CREATE TABLE IF NOT EXISTS pegawai (
-  "idPegawai"     VARCHAR(10)  PRIMARY KEY
+  "nip"           VARCHAR(30)  PRIMARY KEY,
+  "idPegawai"     VARCHAR(10)  UNIQUE
                   DEFAULT 'PGW' || LPAD(nextval('seq_pegawai')::TEXT, 7, '0'),
   "nama"          VARCHAR(100) NOT NULL,
-  "nip"           VARCHAR(30)  NOT NULL UNIQUE,
   "alamat"        VARCHAR(255) NULL,
   "noTelp"        VARCHAR(15)  NULL,
   "email"         VARCHAR(100) NOT NULL UNIQUE,

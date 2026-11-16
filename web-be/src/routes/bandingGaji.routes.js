@@ -12,7 +12,6 @@ import { authenticate, authorize } from '../middlewares/auth.js';
 import { ROLES } from '../utils/roles.js';
 
 const router = Router();
-const pengelola = authorize(ROLES.HRD, ROLES.MANAJEMEN_KEUANGAN);
 
 router.use(authenticate);
 
@@ -21,10 +20,12 @@ router.post('/', ajukanBanding);
 router.get('/saya', bandingSaya);
 router.patch('/:idPengajuan/batal', batalkanBanding);
 
-// HRD & Manajemen Keuangan
-router.get('/', pengelola, daftarBanding);
+// Daftar & Detail: HRD dan Manajemen Keuangan (pemantauan)
+router.get('/', authorize(ROLES.HRD, ROLES.MANAJEMEN_KEUANGAN), daftarBanding);
 router.get('/:idPengajuan', detailBanding);
-router.patch('/:idPengajuan/proses', pengelola, prosesBanding);
+
+// Verifikasi & Pengesahan Banding: HANYA HRD (bukan Manajemen Keuangan)
+router.patch('/:idPengajuan/proses', authorize(ROLES.HRD), prosesBanding);
 
 export default router;
 

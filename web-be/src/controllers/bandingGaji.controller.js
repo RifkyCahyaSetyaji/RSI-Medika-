@@ -146,6 +146,10 @@ export const detailBanding = asyncHandler(async (req, res) => {
  * Jika status = 'Disetujui' dan ada perubahan tunjangan/potongan, slip gaji periode tersebut ikut diperbarui.
  */
 export const prosesBanding = asyncHandler(async (req, res) => {
+  if (req.user.role !== ROLES.HRD && req.user.role !== ROLES.SUPER_ADMIN) {
+    throw new ApiError(403, 'Hanya HRD yang berwenang melakukan verifikasi dan validasi aju banding');
+  }
+
   const { status, keputusan, tunjanganBaru, potonganBaru, selisihTunjangan, selisihPotongan } = req.body || {};
   const validStatus = [STATUS_BANDING.DIPROSES, STATUS_BANDING.DISETUJUI, STATUS_BANDING.DITOLAK];
   if (!validStatus.includes(status)) {

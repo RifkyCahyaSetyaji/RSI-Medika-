@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/http.js';
+import { ROLES } from '../utils/roles.js';
 
 /** Verifikasi header "Authorization: Bearer <token>" lalu isi req.user. */
 export function authenticate(req, res, next) {
@@ -30,8 +31,8 @@ export const authorize =
   (...roles) =>
   (req, res, next) => {
     if (!req.user) return next(new ApiError(401, 'Belum login'));
-    if (!roles.includes(req.user.role)) {
-      return next(new ApiError(403, 'Anda tidak memiliki akses ke resource ini'));
+    if (req.user.role === ROLES.SUPER_ADMIN || roles.includes(req.user.role)) {
+      return next();
     }
-    next();
+    return next(new ApiError(403, 'Anda tidak memiliki akses ke resource ini'));
   };

@@ -102,9 +102,9 @@ model pedoman_penggajian {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model pegawai {
-  idPegawai                String                     @id @default(dbgenerated("('PGW'::text || lpad((nextval('seq_pegawai'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
+  nip                      String                     @id @db.VarChar(30)
+  idPegawai                String                     @unique @default(dbgenerated("('PGW'::text || lpad((nextval('seq_pegawai'::regclass))::text, 7, '0'::text))")) @db.VarChar(10)
   nama                     String                     @db.VarChar(100)
-  nip                      String                     @unique @db.VarChar(30)
   alamat                   String?                    @db.VarChar(255)
   noTelp                   String?                    @db.VarChar(15)
   email                    String                     @unique @db.VarChar(100)
