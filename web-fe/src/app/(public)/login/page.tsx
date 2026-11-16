@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Eye, EyeOff } from "lucide-react";
-import { useAuth, UserRole, ROLE_PROFILES } from "@/shared/providers/auth-provider";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { useAuth, UserRole, ROLE_PROFILES, DEFAULT_CREDENTIALS, ROLE_PATHS } from "@/shared/providers/auth-provider";
 
 /* Figma Node #206:22121 SVG Icon */
 function MedikaLogoIcon({ className = "w-7 h-7" }: { className?: string }) {
@@ -79,31 +80,57 @@ function FigmaLockIcon({ className = "w-6 h-6" }: { className?: string }) {
 }
 
 export default function LoginPage() {
-  const { login } = useAuth();
-  const [identifier, setIdentifier] = useState("198904122014022001");
-  const [password, setPassword] = useState("••••••••••••");
+  const { loginWithCredentials, switchRole, isAuthenticated, isLoading, role } = useAuth();
+  const router = useRouter();
+  const [identifier, setIdentifier] = useState("ayulestari");
+  const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<UserRole>("TENAGA_MEDIS");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const detectRoleFromIdentifier = (val: string): UserRole => {
-    const lower = val.toLowerCase().trim();
-    if (lower.includes("hrd") || lower.includes("198205152008011003") || lower.includes("athaya")) return "HRD";
-    if (lower.includes("sekretaris") || lower.includes("199103202015022002") || lower.includes("rizky")) return "SEKRETARIS";
-    if (lower.includes("keuangan") || lower.includes("payroll") || lower.includes("198511102010011005") || lower.includes("bambang")) return "KEUANGAN";
-    return selectedRole || "TENAGA_MEDIS";
-  };
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.replace(`/${ROLE_PATHS[role]}/dashboard`);
+    }
+  }, [isLoading, isAuthenticated, role, router]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const roleToLogin = detectRoleFromIdentifier(identifier);
-    login(roleToLogin);
+    setErrorMessage(null);
+    setLoading(true);
+
+    try {
+      await loginWithCredentials(identifier.trim(), password);
+    } catch (err: any) {
+      setErrorMessage(
+        err?.message || "Email/username atau kata sandi tidak valid. Periksa kembali data login Anda."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleQuickLogin = (role: UserRole) => {
-    setSelectedRole(role);
-    setIdentifier(ROLE_PROFILES[role]?.nip || "");
-    login(role);
+  const handleQuickLogin = async (role: UserRole) => {
+    const creds = DEFAULT_CREDENTIALS[role];
+    if (creds) {
+      setIdentifier(creds.identifier);
+      setPassword(creds.password);
+    }
+    setErrorMessage(null);
+    setLoading(true);
+    try {
+      if (creds) {
+        await loginWithCredentials(creds.identifier, creds.password);
+      } else {
+        await switchRole(role, true);
+      }
+    } catch {
+      // Fallback jika API sedang tidak terjangkau
+      await switchRole(role, true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -168,13 +195,21 @@ export default function LoginPage() {
               </p>
             </div>
 
+            {/* Error Notification Alert */}
+            {errorMessage && (
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start gap-2.5 text-xs sm:text-sm animate-in fade-in duration-200">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-500 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             {/* Login Form (#206:22044) */}
             <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               
               {/* Field 1: NIP atau email (#206:22080) */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm sm:text-base font-medium text-[#202020]">
-                  NIP atau email
+                  NIP, email, atau username
                 </label>
                 <div className="relative flex items-center h-14 px-4 bg-white border-[1.5px] border-[#C5C5C5] rounded-xl transition-all duration-200 focus-within:border-[#5A3FE1] focus-within:ring-4 focus-within:ring-[#5A3FE1]/15 gap-3">
                   <div className="text-[#7E7E7E] shrink-0 pointer-events-none">
@@ -185,8 +220,9 @@ export default function LoginPage() {
                     required
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="Masukkan NIP atau email"
+                    placeholder="Masukkan NIP, email, atau username"
                     className="w-full h-full bg-transparent text-sm sm:text-base text-[#202020] placeholder:text-[#9E9E9E] outline-none"
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -207,6 +243,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Masukkan kata sandi"
                     className="w-full h-full bg-transparent text-sm sm:text-base text-[#202020] placeholder:text-[#9E9E9E] outline-none pr-8"
+                    disabled={loading}
                   />
                   <button
                     type="button"
@@ -246,43 +283,55 @@ export default function LoginPage() {
               {/* Submit Button (#206:22114) */}
               <button
                 type="submit"
-                className="w-full h-14 rounded-xl bg-[#5A3FE1] hover:bg-[#4731B6] active:scale-[0.99] text-white text-base sm:text-lg font-medium shadow-md shadow-[#5A3FE1]/20 transition-all cursor-pointer flex items-center justify-center mt-2"
+                disabled={loading}
+                className="w-full h-14 rounded-xl bg-[#5A3FE1] hover:bg-[#4731B6] active:scale-[0.99] text-white text-base sm:text-lg font-medium shadow-md shadow-[#5A3FE1]/20 transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Masuk
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Memverifikasi Akun...</span>
+                  </>
+                ) : (
+                  <span>Masuk</span>
+                )}
               </button>
             </form>
 
             {/* Quick Demo Access Bar */}
             <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
               <p className="text-xs font-semibold text-[#7E7E7E] text-center">
-                Demo Quick Access (Pilih Peran):
+                Demo Quick Access (Pilih Peran & Sinkronkan Akun):
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleQuickLogin("TENAGA_MEDIS")}
-                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                  disabled={loading}
+                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
                 >
                   Tenaga Medis
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin("HRD")}
-                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                  disabled={loading}
+                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
                 >
                   HRD
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin("SEKRETARIS")}
-                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                  disabled={loading}
+                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
                 >
                   Sekretaris Unit
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickLogin("KEUANGAN")}
-                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center"
+                  disabled={loading}
+                  className="h-10 px-3 text-xs font-medium rounded-xl border border-[#C4BAF5] bg-[#F2F1F9] text-[#4731B6] hover:bg-[#4731B6] hover:text-white transition-all cursor-pointer flex items-center justify-center disabled:opacity-50"
                 >
                   Keuangan
                 </button>

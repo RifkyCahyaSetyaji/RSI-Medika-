@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAuth, ROLE_PATHS } from "@/shared/providers/auth-provider";
 
 export default function RootPage() {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (isLoading) return;
     if (isAuthenticated) {
       router.replace(`/${ROLE_PATHS[role]}/dashboard`);
     } else {
       router.replace("/login");
     }
-  }, [isAuthenticated, role, router]);
+  }, [isAuthenticated, role, isLoading, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#ECECEC]">

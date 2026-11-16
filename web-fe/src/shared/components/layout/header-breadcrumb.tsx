@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { usePathname } from "next/navigation";
-import { useAuth, UserRole, PATH_TO_ROLE } from "@/shared/providers/auth-provider";
+import { useAuth, UserRole } from "@/shared/providers/auth-provider";
 import { ChevronDown, Sparkles, Menu } from "lucide-react";
 import { useSidebarContext } from "./sidebar-context";
 
@@ -55,17 +55,6 @@ export function HeaderBreadcrumb() {
   const { role, switchRole } = useAuth();
   const { toggleSidebar } = useSidebarContext();
   const currentTitle = TITLE_MAP[pathname] || "Dashboard";
-
-  // Automatically sync role if user navigates to another role's route prefix
-  useEffect(() => {
-    const segments = pathname.split("/").filter(Boolean);
-    if (segments.length > 0) {
-      const detectedRole = PATH_TO_ROLE[segments[0]];
-      if (detectedRole && detectedRole !== role) {
-        switchRole(detectedRole, false);
-      }
-    }
-  }, [pathname, role, switchRole]);
 
   return (
     <div className="w-full bg-white rounded-2xl px-3.5 sm:px-6 py-2.5 sm:py-3 shadow-xs border border-black/5 flex items-center justify-between gap-2 sm:gap-4">

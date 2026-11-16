@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,10 +18,97 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
+import { cutiService } from "@/shared/services/api/cuti.service";
+import { izinService } from "@/shared/services/api/izin.service";
+import { koreksiAbsensiService } from "@/shared/services/api/koreksi-absensi.service";
+import { pengajuanJadwalService } from "@/shared/services/api/pengajuan-jadwal.service";
+import { CutiItem, IzinItem, KoreksiAbsensiItem } from "@/shared/types/api";
 
 export default function SekretarisDashboard() {
   const { user } = useAuth();
-  const todayFormatted = "Selasa, 10 Oktober 2026";
+  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
+  const [pendingSubmissionsCount, setPendingSubmissionsCount] = useState<number>(8);
+  const [recentSubmissions, setRecentSubmissions] = useState<
+    { title: string; subtitle: string; status: "Diproses" | "Disetujui" | "Menunggu" | "Ditolak" }[]
+  >([
+    {
+      title: "Tukar Shift Malam ke Siang · Ns. Rani Oktavia (dengan Bima Pratama)",
+      subtitle: "Hari ini · 09.24 · Jadwal 12 Mei 2025",
+      status: "Diproses",
+    },
+    {
+      title: "Izin Sakit dengan Surat Dokter · Ns. Ayu Lestari, S.Kep.",
+      subtitle: "Kemarin · 15.12 · 1 Hari Istirahat",
+      status: "Diproses",
+    },
+    {
+      title: "Cuti Tahunan Dokter Bangsal · dr. Hendra Wijaya, Sp.A",
+      subtitle: "08 Mei 2025 · 3 Hari Kerja",
+      status: "Disetujui",
+    },
+  ]);
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayFormatted(
+      now.toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+
+    async function loadSekretarisData() {
+      try {
+        const [cutiRes, izinRes, korRes, jadwalReqRes] = await Promise.allSettled([
+          cutiService.daftarCuti(),
+          izinService.daftarIzin(),
+          koreksiAbsensiService.daftarKoreksi(),
+          pengajuanJadwalService.daftarPengajuan(),
+        ]);
+
+        let totalPending = 0;
+        const feed: { title: string; subtitle: string; status: "Diproses" | "Disetujui" | "Menunggu" | "Ditolak" }[] = [];
+
+        if (cutiRes.status === "fulfilled" && cutiRes.value) {
+          totalPending += cutiRes.value.filter((c: CutiItem) => c.status === "MENUNGGU").length;
+          cutiRes.value.slice(0, 2).forEach((c: CutiItem) => {
+            feed.push({
+              title: `Cuti · ${c.pegawai?.nama || "Pegawai"} (${c.jenisCuti || "Tahunan"})`,
+              subtitle: `${new Date(c.tanggalMulai).toLocaleDateString("id-ID")} s/d ${new Date(c.tanggalSelesai).toLocaleDateString("id-ID")}`,
+              status: (c.status === "DISETUJUI" ? "Disetujui" : c.status === "DITOLAK" ? "Ditolak" : "Diproses") as any,
+            });
+          });
+        }
+
+        if (izinRes.status === "fulfilled" && izinRes.value) {
+          totalPending += izinRes.value.filter((i: IzinItem) => i.status === "MENUNGGU").length;
+          izinRes.value.slice(0, 2).forEach((i: IzinItem) => {
+            feed.push({
+              title: `Izin · ${i.pegawai?.nama || "Pegawai"} (${i.jenis || "Izin"})`,
+              subtitle: i.alasan || "Permohonan izin ketidakhadiran",
+              status: (i.status === "DISETUJUI" ? "Disetujui" : i.status === "DITOLAK" ? "Ditolak" : "Diproses") as any,
+            });
+          });
+        }
+
+        if (korRes.status === "fulfilled" && korRes.value) {
+          totalPending += korRes.value.filter((k: KoreksiAbsensiItem) => k.status === "MENUNGGU").length;
+        }
+
+        if (jadwalReqRes.status === "fulfilled" && jadwalReqRes.value) {
+          totalPending += jadwalReqRes.value.filter((j: any) => j.status === "MENUNGGU").length;
+        }
+
+        if (totalPending > 0) setPendingSubmissionsCount(totalPending);
+        if (feed.length > 0) setRecentSubmissions(feed.slice(0, 3));
+      } catch {
+        // Fallback default
+      }
+    }
+    loadSekretarisData();
+  }, []);
 
   const weeklyShiftCoverage = [
     { day: "Sen", pagi: 8, siang: 6, malam: 4, coverage: 100 },
@@ -118,10 +205,10 @@ export default function SekretarisDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#F39C12] tracking-tight">
-              8 Pengajuan
+              {pendingSubmissionsCount} Pengajuan
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              4 Tukar Shift · 3 Cuti · 1 Koreksi
+              Tukar shift, cuti & koreksi presensi
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -300,40 +387,25 @@ export default function SekretarisDashboard() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm sm:text-base font-bold text-[#202020]">Pengajuan Absensi Terkini di Unit</h3>
           <Link href="/sekretaris/absensi" className="text-xs font-semibold text-[#4731B6] hover:underline">
-            Tinjau semua ({8})
+            Tinjau semua ({pendingSubmissionsCount})
           </Link>
         </div>
 
         <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Tukar Shift Malam ke Siang · Ns. Rani Oktavia (dengan Bima Pratama)
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Hari ini · 09.24 · Jadwal 12 Mei 2025</p>
+          {recentSubmissions.map((item, idx) => (
+            <div
+              key={idx}
+              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="min-w-0">
+                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                  {item.title}
+                </h5>
+                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+              </div>
+              <StatusBadge status={item.status} />
             </div>
-            <StatusBadge status="Diproses" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Izin Sakit dengan Surat Dokter · Ns. Ayu Lestari, S.Kep.
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Kemarin · 15.12 · 1 Hari Istirahat</p>
-            </div>
-            <StatusBadge status="Diproses" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Cuti Tahunan Dokter Bangsal · dr. Hendra Wijaya, Sp.A
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">08 Mei 2025 · 3 Hari Kerja</p>
-            </div>
-            <StatusBadge status="Disetujui" />
-          </div>
+          ))}
         </div>
       </div>
     </div>

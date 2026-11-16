@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,10 +18,90 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
+import { bandingGajiService } from "@/shared/services/api/banding-gaji.service";
+import { pedomanGajiService } from "@/shared/services/api/pedoman-gaji.service";
+import { hrdService } from "@/shared/services/api/hrd.service";
+import { BandingGajiItem } from "@/shared/types/api";
 
 export default function HRDDashboard() {
   const { user } = useAuth();
-  const todayFormatted = "Selasa, 10 Oktober 2026";
+  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
+  const [pendingBandingCount, setPendingBandingCount] = useState<number>(4);
+  const [totalPedomanCount, setTotalPedomanCount] = useState<number>(12);
+  const [pegawaiTanpaAkunCount, setPegawaiTanpaAkunCount] = useState<number>(0);
+  const [recentBandingList, setRecentBandingList] = useState<
+    { title: string; subtitle: string; status: "Disetujui" | "Menunggu" | "Diproses" | "Ditolak" }[]
+  >([
+    {
+      title: "Pengajuan Banding Gaji · Ns. Ayu Lestari (Tunjangan Shift Malam)",
+      subtitle: "Hari ini · 09.24 · Unit Rawat Inap",
+      status: "Diproses",
+    },
+    {
+      title: "Pengajuan Cuti Tahunan · dr. Hendra Wijaya, Sp.A (3 Hari)",
+      subtitle: "Kemarin · 15.12 · Poliklinik Anak",
+      status: "Disetujui",
+    },
+    {
+      title: "Koreksi Presensi Fingerprint · Bima Pratama, A.Md.Kep.",
+      subtitle: "08 Mei 2025 · 10.45 · Shift Siang",
+      status: "Disetujui",
+    },
+  ]);
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayFormatted(
+      now.toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+
+    async function loadHRDData() {
+      try {
+        const [bandings, pedomans, pTanpaAkun] = await Promise.allSettled([
+          bandingGajiService.daftarBanding(),
+          pedomanGajiService.daftarPedoman(),
+          hrdService.pegawaiTanpaAkun(),
+        ]);
+
+        if (bandings.status === "fulfilled" && bandings.value) {
+          const items = bandings.value;
+          const pending = items.filter(
+            (b: BandingGajiItem) => b.status === "MENUNGGU" || b.status === "DIPROSES"
+          ).length;
+          setPendingBandingCount(pending || items.length);
+
+          if (items.length > 0) {
+            const mapped = items.slice(0, 3).map((b: BandingGajiItem) => ({
+              title: `Banding Gaji · ${b.pegawai?.nama || "Pegawai"} (${b.periodeGaji})`,
+              subtitle: b.alasanBanding || "Pengajuan selisih tunjangan / lembur",
+              status: (b.status === "DISETUJUI"
+                ? "Disetujui"
+                : b.status === "DITOLAK"
+                ? "Ditolak"
+                : "Diproses") as "Disetujui" | "Menunggu" | "Diproses" | "Ditolak",
+            }));
+            setRecentBandingList(mapped);
+          }
+        }
+
+        if (pedomans.status === "fulfilled" && pedomans.value) {
+          setTotalPedomanCount(pedomans.value.length || 12);
+        }
+
+        if (pTanpaAkun.status === "fulfilled" && pTanpaAkun.value) {
+          setPegawaiTanpaAkunCount(pTanpaAkun.value.length);
+        }
+      } catch {
+        // Fallback default
+      }
+    }
+    loadHRDData();
+  }, []);
 
   const weeklyAttendance = [
     { day: "Sen", percent: 96.2, present: 238 },
@@ -113,15 +193,15 @@ export default function HRDDashboard() {
         {/* Metric 3: Dokumen Menunggu Verifikasi */}
         <div className="bg-white rounded-[22px] p-5 shadow-xs border border-black/5 flex flex-col justify-between space-y-2">
           <div className="flex items-center justify-between text-[#7E7E7E]">
-            <span className="text-xs font-semibold">Banding & Pengajuan</span>
+            <span className="text-xs font-semibold">Banding Gaji Aktif</span>
             <AlertCircle className="w-4 h-4 text-[#F39C12]" />
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#F39C12] tracking-tight">
-              14 Berkas
+              {pendingBandingCount} Berkas
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              4 Banding Gaji · 10 Izin/Cuti
+              {pedomanGajiService ? `${totalPedomanCount} Pedoman Gaji Terbit` : "4 Banding Gaji"}
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -346,35 +426,20 @@ export default function HRDDashboard() {
         </div>
 
         <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Pengajuan Banding Gaji · Ns. Ayu Lestari (Tunjangan Shift Malam)
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Hari ini · 09.24 · Unit Rawat Inap</p>
+          {recentBandingList.map((item, idx) => (
+            <div
+              key={idx}
+              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="min-w-0">
+                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                  {item.title}
+                </h5>
+                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+              </div>
+              <StatusBadge status={item.status} />
             </div>
-            <StatusBadge status="Diproses" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Pengajuan Cuti Tahunan · dr. Hendra Wijaya, Sp.A (3 Hari)
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Kemarin · 15.12 · Poliklinik Anak</p>
-            </div>
-            <StatusBadge status="Disetujui" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Koreksi Presensi Fingerprint · Bima Pratama, A.Md.Kep.
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">08 Mei 2025 · 10.45 · Shift Siang</p>
-            </div>
-            <StatusBadge status="Disetujui" />
-          </div>
+          ))}
         </div>
       </div>
     </div>

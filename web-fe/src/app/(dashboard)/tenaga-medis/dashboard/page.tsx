@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -18,10 +18,110 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
+import { jadwalService } from "@/shared/services/api/jadwal.service";
+import { penggajianService } from "@/shared/services/api/penggajian.service";
+import { cutiService } from "@/shared/services/api/cuti.service";
+import { JadwalItem, PenggajianItem, CutiItem } from "@/shared/types/api";
 
 export default function TenagaMedisDashboard() {
   const { user } = useAuth();
-  const todayFormatted = "Selasa, 10 Oktober 2026";
+  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
+  const [todayShift, setTodayShift] = useState<{
+    namaShift: string;
+    jamMulai: string;
+    jamSelesai: string;
+    ruangan: string;
+  }>({
+    namaShift: "Shift Pagi",
+    jamMulai: "07.00",
+    jamSelesai: "14.00",
+    ruangan: "Bangsal 3A",
+  });
+  const [gajiTerkini, setGajiTerkini] = useState<string>("Rp 6.880.000");
+  const [gajiPeriode, setGajiPeriode] = useState<string>("Periode Mei 2025");
+  const [recentLeaves, setRecentLeaves] = useState<
+    { title: string; subtitle: string; status: "Disetujui" | "Menunggu" | "Diproses" | "Ditolak" }[]
+  >([
+    {
+      title: "Cuti tahunan (3 Hari Kerja)",
+      subtitle: "20–22 Mei 2025 · Unit Rawat Inap",
+      status: "Disetujui",
+    },
+    {
+      title: "Izin keperluan keluarga mendesak",
+      subtitle: "15 Mei 2025 · Shift Pagi",
+      status: "Menunggu",
+    },
+    {
+      title: "Banding insentif tugas jaga malam",
+      subtitle: "Periode April 2025 · Selisih Rp 350.000",
+      status: "Diproses",
+    },
+  ]);
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayFormatted(
+      now.toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+
+    async function loadData() {
+      try {
+        const [jadwals, gajis, cutis] = await Promise.allSettled([
+          jadwalService.jadwalSaya(),
+          penggajianService.gajiSaya(),
+          cutiService.cutiSaya(),
+        ]);
+
+        if (jadwals.status === "fulfilled" && jadwals.value && jadwals.value.length > 0) {
+          const first = jadwals.value[0];
+          setTodayShift({
+            namaShift: first.jenisJadwal || "Shift Pagi",
+            jamMulai: first.jamMulai ? first.jamMulai.slice(0, 5) : "07.00",
+            jamSelesai: first.jamSelesai ? first.jamSelesai.slice(0, 5) : "14.00",
+            ruangan: first.pegawai?.unitKerja || "Bangsal 3A",
+          });
+        }
+
+        if (gajis.status === "fulfilled" && gajis.value && gajis.value.length > 0) {
+          const firstGaji = gajis.value[0];
+          const gross = (Number(firstGaji.gajiPokok) || 0) + (Number(firstGaji.tunjangan) || 0);
+          const net = gross - (Number(firstGaji.potongan) || 0);
+          if (net > 0) {
+            setGajiTerkini(
+              new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+                maximumFractionDigits: 0,
+              }).format(net)
+            );
+            setGajiPeriode(`Periode ${firstGaji.periodeGaji}`);
+          }
+        }
+
+        if (cutis.status === "fulfilled" && cutis.value && cutis.value.length > 0) {
+          const mapped = cutis.value.slice(0, 3).map((c: CutiItem) => ({
+            title: `${c.jenisCuti || "Pengajuan Cuti"}`,
+            subtitle: `${new Date(c.tanggalMulai).toLocaleDateString("id-ID")} s/d ${new Date(c.tanggalSelesai).toLocaleDateString("id-ID")}`,
+            status: (c.status === "DISETUJUI"
+              ? "Disetujui"
+              : c.status === "DITOLAK"
+              ? "Ditolak"
+              : "Menunggu") as "Disetujui" | "Menunggu" | "Diproses" | "Ditolak",
+          }));
+          setRecentLeaves(mapped);
+        }
+      } catch {
+        // Fallback default
+      }
+    }
+    loadData();
+  }, []);
 
   const getDisplayName = (fullName?: string) => {
     if (!fullName) return "Ayu";
@@ -149,10 +249,10 @@ export default function TenagaMedisDashboard() {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-extrabold text-[#4731B6] tracking-tight">
-              Rp 6.880.000
+              {gajiTerkini}
             </div>
             <p className="text-[11px] text-[#0E6100] font-medium mt-0.5 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Periode Mei 2025 (Lunas)
+              <CheckCircle2 className="w-3 h-3" /> {gajiPeriode} (Lunas)
             </p>
           </div>
           <Link
@@ -292,20 +392,20 @@ export default function TenagaMedisDashboard() {
           <div className="bg-[#4731B6] rounded-[24px] p-6 text-white shadow-sm flex flex-col justify-between min-h-[240px]">
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-lg sm:text-xl font-bold tracking-tight">Shift Pagi</h4>
+                <h4 className="text-lg sm:text-xl font-bold tracking-tight">{todayShift.namaShift}</h4>
                 <span className="bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                  Bangsal 3A
+                  {todayShift.ruangan}
                 </span>
               </div>
 
               <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-white/90">
                 <div className="flex items-center gap-3">
                   <Clock className="w-4 h-4 text-white/80 shrink-0" />
-                  <span>07.00–14.00 WIB (Aktif)</span>
+                  <span>{todayShift.jamMulai}–{todayShift.jamSelesai} WIB (Aktif)</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <MapPin className="w-4 h-4 text-white/80 shrink-0" />
-                  <span className="truncate">{user?.unit || "Unit Rawat Inap"} · Kamar 301-308</span>
+                  <span className="truncate">{user?.unit || "Unit Rawat Inap"} · {todayShift.ruangan}</span>
                 </div>
                 <div className="flex items-center gap-3 text-white/80 text-xs">
                   <Award className="w-4 h-4 text-white/80 shrink-0" />
@@ -337,35 +437,20 @@ export default function TenagaMedisDashboard() {
           </div>
 
           <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-            <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-              <div className="min-w-0">
-                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                  Cuti tahunan (3 Hari Kerja)
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">20–22 Mei 2025 · Unit Rawat Inap</p>
+            {recentLeaves.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                    {item.title}
+                  </h5>
+                  <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+                </div>
+                <StatusBadge status={item.status} />
               </div>
-              <StatusBadge status="Disetujui" />
-            </div>
-
-            <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-              <div className="min-w-0">
-                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                  Izin keperluan keluarga mendesak
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">15 Mei 2025 · Shift Pagi</p>
-              </div>
-              <StatusBadge status="Menunggu" />
-            </div>
-
-            <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-              <div className="min-w-0">
-                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                  Banding insentif tugas jaga malam
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Periode April 2025 · Selisih Rp 350.000</p>
-              </div>
-              <StatusBadge status="Diproses" />
-            </div>
+            ))}
           </div>
         </div>
       </div>

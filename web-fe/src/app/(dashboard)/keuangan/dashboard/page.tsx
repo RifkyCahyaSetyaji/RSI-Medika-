@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -17,10 +17,89 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
+import { penggajianService } from "@/shared/services/api/penggajian.service";
+import { bandingGajiService } from "@/shared/services/api/banding-gaji.service";
+import { PenggajianItem, BandingGajiItem } from "@/shared/types/api";
 
 export default function KeuanganDashboard() {
   const { user } = useAuth();
-  const todayFormatted = "Selasa, 10 Oktober 2026";
+  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
+  const [totalDisbursed, setTotalDisbursed] = useState<string>("Rp 1,182 M");
+  const [paidCount, setPaidCount] = useState<number>(244);
+  const [totalStaff, setTotalStaff] = useState<number>(248);
+  const [pendingBandingCount, setPendingBandingCount] = useState<number>(3);
+  const [recentPayrollLogs, setRecentPayrollLogs] = useState<
+    { title: string; subtitle: string; status: "Terbayar" | "Disetujui" | "Diproses" | "Menunggu" }[]
+  >([
+    {
+      title: "Disbursement Batch Payroll Periode Mei 2025 ke 244 Rekening Mandiri",
+      subtitle: "Hari ini · 09.24 · Host-to-Host Berhasil",
+      status: "Terbayar",
+    },
+    {
+      title: "Banding potongan absensi disetujui · Ns. Ayu Lestari (+ Rp 120.000)",
+      subtitle: "Kemarin · 15.12 · Penyesuaian Payroll Juni",
+      status: "Disetujui",
+    },
+    {
+      title: "Koreksi rekonsiliasi transfer kliring BNI · Ns. Dewi Sartika",
+      subtitle: "08 Mei 2025 · 11.20 · Menunggu validasi nomor rekening",
+      status: "Diproses",
+    },
+  ]);
+
+  useEffect(() => {
+    const now = new Date();
+    setTodayFormatted(
+      now.toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      })
+    );
+
+    async function loadKeuanganData() {
+      try {
+        const [gajis, bandings] = await Promise.allSettled([
+          penggajianService.daftarGaji(),
+          bandingGajiService.daftarBanding(),
+        ]);
+
+        if (gajis.status === "fulfilled" && gajis.value && gajis.value.length > 0) {
+          const list = gajis.value;
+          setTotalStaff(list.length);
+          const paid = list.filter(
+            (g: PenggajianItem) => g.statusPembayaran === "Lunas" || g.statusPembayaran === "Terbayar"
+          ).length;
+          setPaidCount(paid);
+
+          const sumGross = list.reduce(
+            (acc: number, item: PenggajianItem) =>
+              acc + (Number(item.gajiPokok) || 0) + (Number(item.tunjangan) || 0) - (Number(item.potongan) || 0),
+            0
+          );
+          if (sumGross > 0) {
+            if (sumGross >= 1000000000) {
+              setTotalDisbursed(`Rp ${(sumGross / 1000000000).toFixed(2)} M`);
+            } else {
+              setTotalDisbursed(`Rp ${(sumGross / 1000000).toFixed(0)} Jt`);
+            }
+          }
+        }
+
+        if (bandings.status === "fulfilled" && bandings.value) {
+          const pending = bandings.value.filter(
+            (b: BandingGajiItem) => b.status === "MENUNGGU" || b.status === "DIPROSES"
+          ).length;
+          setPendingBandingCount(pending || bandings.value.length);
+        }
+      } catch {
+        // Fallback default
+      }
+    }
+    loadKeuanganData();
+  }, []);
 
   const monthlyPayrollTrend = [
     { month: "Jan", total: 1140, label: "Rp 1,14 M" },
@@ -77,10 +156,10 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-extrabold text-[#4731B6] tracking-tight truncate">
-              Rp 1,182 M
+              {totalDisbursed}
             </div>
             <p className="text-[11px] text-[#0E6100] font-medium mt-0.5 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> 98.5% dari pagu anggaran
+              <CheckCircle2 className="w-3 h-3" /> Realisasi payroll aktif
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -96,10 +175,10 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#202020] tracking-tight">
-              244 <span className="text-xs font-normal text-[#7E7E7E]">/ 248 Staf</span>
+              {paidCount} <span className="text-xs font-normal text-[#7E7E7E]">/ {totalStaff} Staf</span>
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              4 pegawai proses verifikasi bank
+              {totalStaff - paidCount} pegawai proses verifikasi bank
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -134,10 +213,10 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#F39C12] tracking-tight">
-              12 Berkas
+              {pendingBandingCount} Berkas
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              Estimasi sengketa: Rp 4,2 Juta
+              Banding kompensasi menunggu
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -327,35 +406,20 @@ export default function KeuanganDashboard() {
         </div>
 
         <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Disbursement Batch Payroll Periode Mei 2025 ke 244 Rekening Mandiri
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Hari ini · 09.24 · Host-to-Host Berhasil</p>
+          {recentPayrollLogs.map((item, idx) => (
+            <div
+              key={idx}
+              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="min-w-0">
+                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                  {item.title}
+                </h5>
+                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+              </div>
+              <StatusBadge status={item.status} />
             </div>
-            <StatusBadge status="Terbayar" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Banding potongan absensi disetujui · Ns. Ayu Lestari (+ Rp 120.000)
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">Kemarin · 15.12 · Penyesuaian Payroll Juni</p>
-            </div>
-            <StatusBadge status="Disetujui" />
-          </div>
-
-          <div className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors">
-            <div className="min-w-0">
-              <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                Koreksi rekonsiliasi transfer kliring BNI · Ns. Dewi Sartika
-              </h5>
-              <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">08 Mei 2025 · 11.20 · Menunggu validasi nomor rekening</p>
-            </div>
-            <StatusBadge status="Diproses" />
-          </div>
+          ))}
         </div>
       </div>
     </div>

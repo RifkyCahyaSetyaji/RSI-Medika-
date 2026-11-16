@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { Search, Plus, X, CheckCircle2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Plus, X, CheckCircle2, Loader2 } from "lucide-react";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
+import { Pagination } from "@/shared/components/ui/pagination";
+import { jadwalService } from "@/shared/services/api/jadwal.service";
+import { JadwalItem } from "@/shared/types/api";
 
 interface ScheduleItem {
   id: string;
@@ -20,6 +23,8 @@ export default function KelolaJadwalPage() {
   const [selectedShiftFilter, setSelectedShiftFilter] = useState("Semua");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Add form state
   const [pegawaiName, setPegawaiName] = useState("Ayu Lestari");
@@ -70,8 +75,58 @@ export default function KelolaJadwalPage() {
     },
   ]);
 
-  const handleCreateSchedule = (e: React.FormEvent) => {
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    async function loadJadwal() {
+      setIsLoading(true);
+      try {
+        const data = await jadwalService.daftarJadwal();
+        if (data && data.length > 0) {
+          const mapped: ScheduleItem[] = data.map((j: JadwalItem) => {
+            const d = new Date(j.tanggal);
+            const jamMulai = j.jamMulai ? j.jamMulai.slice(11, 16) : "07.00";
+            const jamSelesai = j.jamSelesai ? j.jamSelesai.slice(11, 16) : "14.00";
+            return {
+              id: j.idJadwal,
+              pegawai: j.pegawai?.nama || "Pegawai",
+              nip: j.pegawai?.nip || "-",
+              tanggal: d.toLocaleDateString("id-ID", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+              shift: j.jenisJadwal,
+              jam: `${jamMulai}–${jamSelesai}`,
+              unit: j.pegawai?.unitKerja || "Rawat Inap",
+              status: "Disetujui",
+            };
+          });
+          setSchedules(mapped);
+        }
+      } catch {
+        // Fallback default
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadJadwal();
+  }, []);
+
+  const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await jadwalService.buatJadwal({
+        idPegawai: "PGW0000001",
+        tanggal: scheduleDate,
+        jamMulai: `${scheduleDate}T07:00:00Z`,
+        jamSelesai: `${scheduleDate}T14:00:00Z`,
+        jenisJadwal: scheduleShift.split(" ")[0] || "Shift Pagi",
+      });
+    } catch {
+      // Local fallback
+    }
     const newItem: ScheduleItem = {
       id: String(Date.now()),
       pegawai: pegawaiName,
@@ -100,6 +155,9 @@ export default function KelolaJadwalPage() {
       selectedShiftFilter === "Semua" || s.shift.includes(selectedShiftFilter);
     return matchSearch && matchShift;
   });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="space-y-5 sm:space-y-6">
@@ -135,7 +193,10 @@ export default function KelolaJadwalPage() {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Cari nama atau NIP..."
                 className="w-full bg-white border border-[#D8D8D8] focus:border-[#4731B6] rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm text-[#202020] outline-none"
               />
@@ -146,7 +207,10 @@ export default function KelolaJadwalPage() {
             <span className="text-xs font-semibold text-[#202020] block">Filter shift</span>
             <select
               value={selectedShiftFilter}
-              onChange={(e) => setSelectedShiftFilter(e.target.value)}
+              onChange={(e) => {
+                setSelectedShiftFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full bg-white border border-[#D8D8D8] focus:border-[#4731B6] rounded-xl py-2.5 px-3.5 text-xs sm:text-sm text-[#202020] outline-none cursor-pointer"
             >
               <option value="Semua">Semua Shift</option>
@@ -170,7 +234,7 @@ export default function KelolaJadwalPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-[20px] sm:rounded-[28px] overflow-hidden shadow-xs border border-black/5">
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200/90 overflow-hidden space-y-0">
         <div className="overflow-x-auto">
           <table className="w-full text-left min-w-[620px] sm:min-w-full">
             <thead>
@@ -184,7 +248,7 @@ export default function KelolaJadwalPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs sm:text-sm">
-              {filtered.map((item) => (
+              {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
                   <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-bold text-[#202020] whitespace-nowrap">{item.pegawai}</td>
                   <td className="py-3.5 px-4 sm:py-4 sm:px-6 font-mono text-[#5F5F5F] whitespace-nowrap">{item.nip}</td>
@@ -217,6 +281,17 @@ export default function KelolaJadwalPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={setItemsPerPage}
+          pageSizeOptions={[5, 10, 20]}
+        />
       </div>
 
       {/* Modal Tambah Jadwal Kerja */}

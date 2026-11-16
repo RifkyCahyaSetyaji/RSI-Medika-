@@ -40,7 +40,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center px-4 py-1 rounded-full text-xs font-medium tracking-wide transition-colors",
+        "inline-flex items-center justify-center px-2.5 py-0.5 rounded-md text-xs font-semibold border border-current/15 transition-colors",
         style,
         className
       )}
