@@ -330,7 +330,7 @@ Gunakan `docker compose logs -f` untuk melihat log dan `docker compose down` unt
 2. **Database & Naming Convention**:
    - Nama tabel menggunakan format `snake_case` (misal: `pengajuan_cuti`, `peran_tenaga_medis`).
    - Nama kolom tabel menggunakan `camelCase` (misal: `"idPegawai"`, `"jamMulai"`, `"totalGaji"`) agar serasi dengan format respons objek JavaScript.
-   - Row Level Security (RLS) diaktifkan secara default untuk memproteksi akses langsung client tanpa autentikasi service role.
+   - Row Level Security (RLS) diaktifkan secara default untuk memproteksi akses langsung client tanpa autentikasi service role..
 
 ---
 
