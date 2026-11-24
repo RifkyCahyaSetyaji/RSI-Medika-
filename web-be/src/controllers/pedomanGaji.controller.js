@@ -137,6 +137,13 @@ export const ubahPedoman = asyncHandler(async (req, res) => {
 
 /** DELETE /api/pedoman-gaji/:idPedoman */
 export const hapusPedoman = asyncHandler(async (req, res) => {
+  const existing = await prisma.pedoman_penggajian.findUnique({
+    where: { idPedoman: req.params.idPedoman },
+  });
+  if (!existing) {
+    throw new ApiError(404, 'Pedoman penggajian tidak ditemukan');
+  }
+
   const dipakai = await prisma.penggajian.count({ where: { idPedoman: req.params.idPedoman } });
   if (dipakai > 0) {
     throw new ApiError(400, 'Pedoman sudah dipakai pada data penggajian, tidak bisa dihapus. Batasi masa berlakunya saja.');

@@ -17,7 +17,14 @@ export const absensiService = {
     return res.data;
   },
 
-  riwayatSaya: async (params?: { bulan?: number | string; tahun?: number | string; limit?: number }) => {
+  riwayatSaya: async (params?: {
+    periode?: string;
+    bulan?: number | string;
+    tahun?: number | string;
+    dari?: string;
+    sampai?: string;
+    limit?: number;
+  }) => {
     const res = await apiClient.get<AbsensiItem[]>("/absensi/riwayat", { params });
     return res.data;
   },
@@ -28,12 +35,22 @@ export const absensiService = {
   },
 
   rekapAbsensi: async (params?: {
+    periode?: string;
+    bulan?: number | string;
+    tahun?: number | string;
     tanggalMulai?: string;
     tanggalSelesai?: string;
+    dari?: string;
+    sampai?: string;
     idPegawai?: string;
     unitKerja?: string;
   }) => {
-    const res = await apiClient.get<AbsensiItem[]>("/absensi/rekap", { params });
+    const queryParams: Record<string, string | number | undefined> = {
+      ...params,
+      dari: params?.dari || params?.tanggalMulai,
+      sampai: params?.sampai || params?.tanggalSelesai,
+    };
+    const res = await apiClient.get<AbsensiItem[]>("/absensi/rekap", { params: queryParams });
     return res.data;
   },
 };

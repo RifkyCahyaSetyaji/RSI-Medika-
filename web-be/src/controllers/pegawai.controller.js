@@ -28,6 +28,11 @@ export const daftarPegawai = asyncHandler(async (req, res) => {
     where,
     include: {
       peran_tenaga_medis: true,
+      pegawai_peran: {
+        include: {
+          peran_tenaga_medis: true,
+        },
+      },
       akun: {
         select: {
           idAkun: true,
@@ -55,6 +60,11 @@ export const detailPegawai = asyncHandler(async (req, res) => {
     },
     include: {
       peran_tenaga_medis: true,
+      pegawai_peran: {
+        include: {
+          peran_tenaga_medis: true,
+        },
+      },
       akun: {
         select: {
           idAkun: true,
@@ -90,6 +100,7 @@ export const tambahPegawai = asyncHandler(async (req, res) => {
     tanggalMasuk,
     sisaJatahCuti = 12,
     idPeran,
+    idPeranList,
   } = req.body || {};
 
   if (!nama || !nip || !email || !jabatan || !unitKerja) {
@@ -106,12 +117,21 @@ export const tambahPegawai = asyncHandler(async (req, res) => {
     throw new ApiError(409, `Pegawai dengan email ${email} sudah terdaftar`);
   }
 
-  if (idPeran) {
-    const peran = await prisma.peran_tenaga_medis.findUnique({ where: { idPeran } });
-    if (!peran) {
-      throw new ApiError(400, `Peran tenaga medis dengan id ${idPeran} tidak ditemukan`);
+  // Tentukan kumpulan id peran yang dipilih
+  const peransToSet = Array.isArray(idPeranList)
+    ? idPeranList.filter(Boolean)
+    : (idPeran ? [idPeran] : []);
+
+  if (peransToSet.length > 0) {
+    const validPerans = await prisma.peran_tenaga_medis.findMany({
+      where: { idPeran: { in: peransToSet } },
+    });
+    if (validPerans.length !== peransToSet.length) {
+      throw new ApiError(400, 'Beberapa peran tenaga medis yang dipilih tidak valid');
     }
   }
+
+  const primaryPeran = peransToSet[0] || idPeran || null;
 
   const pegawai = await prisma.pegawai.create({
     data: {
@@ -125,10 +145,23 @@ export const tambahPegawai = asyncHandler(async (req, res) => {
       statusPegawai: statusPegawai || 'Aktif',
       tanggalMasuk: tanggalMasuk ? new Date(tanggalMasuk) : new Date(),
       sisaJatahCuti: Number(sisaJatahCuti) || 12,
-      idPeran: idPeran || null,
+      idPeran: primaryPeran,
+      ...(peransToSet.length > 0 && {
+        pegawai_peran: {
+          create: peransToSet.map((pid, idx) => ({
+            idPeran: pid,
+            isPrimary: idx === 0,
+          })),
+        },
+      }),
     },
     include: {
       peran_tenaga_medis: true,
+      pegawai_peran: {
+        include: {
+          peran_tenaga_medis: true,
+        },
+      },
     },
   });
 
@@ -157,6 +190,7 @@ export const ubahPegawai = asyncHandler(async (req, res) => {
     tanggalMasuk,
     sisaJatahCuti,
     idPeran,
+    idPeranList,
   } = req.body || {};
 
   const pegawai = await prisma.pegawai.findFirst({
@@ -187,11 +221,20 @@ export const ubahPegawai = asyncHandler(async (req, res) => {
     }
   }
 
-  // Validasi idPeran bila ada
-  if (idPeran) {
-    const peran = await prisma.peran_tenaga_medis.findUnique({ where: { idPeran } });
-    if (!peran) {
-      throw new ApiError(400, `Peran tenaga medis dengan id ${idPeran} tidak ditemukan`);
+  // Validasi peran
+  let peransToSet = undefined;
+  if (idPeranList !== undefined) {
+    peransToSet = Array.isArray(idPeranList) ? idPeranList.filter(Boolean) : [];
+  } else if (idPeran !== undefined) {
+    peransToSet = idPeran ? [idPeran] : [];
+  }
+
+  if (peransToSet !== undefined && peransToSet.length > 0) {
+    const validPerans = await prisma.peran_tenaga_medis.findMany({
+      where: { idPeran: { in: peransToSet } },
+    });
+    if (validPerans.length !== peransToSet.length) {
+      throw new ApiError(400, 'Beberapa peran tenaga medis yang dipilih tidak valid');
     }
   }
 
@@ -206,21 +249,48 @@ export const ubahPegawai = asyncHandler(async (req, res) => {
   if (statusPegawai !== undefined) updateData.statusPegawai = statusPegawai;
   if (tanggalMasuk !== undefined) updateData.tanggalMasuk = new Date(tanggalMasuk);
   if (sisaJatahCuti !== undefined) updateData.sisaJatahCuti = Number(sisaJatahCuti);
-  if (idPeran !== undefined) updateData.idPeran = idPeran || null;
+  if (peransToSet !== undefined) {
+    updateData.idPeran = peransToSet[0] || null;
+  } else if (idPeran !== undefined) {
+    updateData.idPeran = idPeran || null;
+  }
 
-  const updated = await prisma.pegawai.update({
-    where: { idPegawai: pegawai.idPegawai },
-    data: updateData,
-    include: {
-      peran_tenaga_medis: true,
-      akun: {
-        select: {
-          idAkun: true,
-          username: true,
-          role: true,
+  const updated = await prisma.$transaction(async (tx) => {
+    if (peransToSet !== undefined) {
+      // Hapus peran lama dan masukkan yang baru
+      await tx.pegawai_peran.deleteMany({
+        where: { idPegawai: pegawai.idPegawai },
+      });
+      if (peransToSet.length > 0) {
+        await tx.pegawai_peran.createMany({
+          data: peransToSet.map((pid, idx) => ({
+            idPegawai: pegawai.idPegawai,
+            idPeran: pid,
+            isPrimary: idx === 0,
+          })),
+        });
+      }
+    }
+
+    return tx.pegawai.update({
+      where: { idPegawai: pegawai.idPegawai },
+      data: updateData,
+      include: {
+        peran_tenaga_medis: true,
+        pegawai_peran: {
+          include: {
+            peran_tenaga_medis: true,
+          },
+        },
+        akun: {
+          select: {
+            idAkun: true,
+            username: true,
+            role: true,
+          },
         },
       },
-    },
+    });
   });
 
   res.json({

@@ -36,6 +36,8 @@ interface PegawaiItem {
   alamat?: string;
   sisaJatahCuti?: number;
   idPeran?: string | null;
+  idPeranList?: string[];
+  peranListNama?: string[];
 }
 
 export default function KepegawaianPage() {
@@ -68,9 +70,10 @@ export default function KepegawaianPage() {
     jabatan: "Perawat",
     unit: "Rawat Inap",
     statusPegawai: "Aktif",
-    tanggalMasuk: "2026-10-01",
+    tanggalMasuk: new Date().toISOString().split("T")[0],
     sisaJatahCuti: 12,
     idPeran: "",
+    idPeranList: [] as string[],
   });
 
   // Form Ubah Pegawai state
@@ -86,6 +89,7 @@ export default function KepegawaianPage() {
     statusPegawai: "Aktif",
     sisaJatahCuti: 12,
     idPeran: "",
+    idPeranList: [] as string[],
   });
 
   const loadData = async () => {
@@ -101,23 +105,37 @@ export default function KepegawaianPage() {
       }
 
       if (pegawaiRes.status === "fulfilled" && pegawaiRes.value && pegawaiRes.value.length > 0) {
-        const mappedFromApi: PegawaiItem[] = pegawaiRes.value.map((p) => ({
-          idPegawai: p.idPegawai,
-          nip: p.nip,
-          nama: p.nama,
-          jabatan: p.jabatan,
-          unit: p.unitKerja,
-          status: p.statusPegawai || "Aktif",
-          email: p.email,
-          noTelp: p.noTelp || "-",
-          alamat: p.alamat || "",
-          sisaJatahCuti: p.sisaJatahCuti ?? 12,
-          idPeran: p.idPeran,
-        }));
+        const mappedFromApi: PegawaiItem[] = pegawaiRes.value.map((p) => {
+          const perans = p.pegawai_peran && p.pegawai_peran.length > 0
+            ? p.pegawai_peran.map((pp) => pp.idPeran)
+            : (p.idPeran ? [p.idPeran] : []);
+
+          const peransNama = p.pegawai_peran && p.pegawai_peran.length > 0
+            ? p.pegawai_peran.map((pp) => pp.peran_tenaga_medis?.namaPeran || pp.idPeran)
+            : (p.peran_tenaga_medis ? [p.peran_tenaga_medis.namaPeran] : []);
+
+          return {
+            idPegawai: p.idPegawai,
+            nip: p.nip,
+            nama: p.nama,
+            jabatan: p.jabatan,
+            unit: p.unitKerja,
+            status: p.statusPegawai || "Aktif",
+            email: p.email,
+            noTelp: p.noTelp || "-",
+            alamat: p.alamat || "",
+            sisaJatahCuti: p.sisaJatahCuti ?? 12,
+            idPeran: p.idPeran,
+            idPeranList: perans,
+            peranListNama: peransNama,
+          };
+        });
         setPegawaiList(mappedFromApi);
+      } else {
+        setPegawaiList([]);
       }
     } catch {
-      // Fallback default list
+      setPegawaiList([]);
     } finally {
       setIsLoading(false);
     }
@@ -132,6 +150,10 @@ export default function KepegawaianPage() {
     setIsSubmitting(true);
     setModalError(null);
     try {
+      const perans = formData.idPeranList.length > 0
+        ? formData.idPeranList
+        : (formData.idPeran ? [formData.idPeran] : []);
+
       const res = await hrdService.tambahPegawai({
         nama: formData.nama,
         nip: formData.nip,
@@ -143,8 +165,12 @@ export default function KepegawaianPage() {
         statusPegawai: formData.statusPegawai,
         tanggalMasuk: formData.tanggalMasuk,
         sisaJatahCuti: Number(formData.sisaJatahCuti) || 12,
-        idPeran: formData.idPeran || null,
+        idPeran: perans[0] || null,
+        idPeranList: perans,
       });
+
+      const peransNama = perans
+        .map((pid) => masterPeran.find((m) => m.idPeran === pid)?.namaPeran || pid);
 
       const created: PegawaiItem = {
         idPegawai: res?.idPegawai || `PGW-${Date.now()}`,
@@ -157,7 +183,9 @@ export default function KepegawaianPage() {
         noTelp: formData.noTelp,
         alamat: formData.alamat,
         sisaJatahCuti: Number(formData.sisaJatahCuti) || 12,
-        idPeran: formData.idPeran || null,
+        idPeran: perans[0] || null,
+        idPeranList: perans,
+        peranListNama: peransNama,
       };
       setPegawaiList((prev) => [created, ...prev]);
       setShowAddModal(false);
@@ -175,9 +203,10 @@ export default function KepegawaianPage() {
         jabatan: "Perawat",
         unit: "Rawat Inap",
         statusPegawai: "Aktif",
-        tanggalMasuk: "2026-10-01",
+        tanggalMasuk: new Date().toISOString().split("T")[0],
         sisaJatahCuti: 12,
         idPeran: "",
+        idPeranList: [],
       });
     } catch (err: any) {
       const errorText = err?.message || "Gagal menambahkan data pegawai.";
@@ -194,6 +223,10 @@ export default function KepegawaianPage() {
   const openEditModal = (item: PegawaiItem) => {
     setSelectedPegawai(item);
     setModalError(null);
+    const perans = item.idPeranList && item.idPeranList.length > 0
+      ? item.idPeranList
+      : (item.idPeran ? [item.idPeran] : []);
+
     setEditFormData({
       idPegawai: item.idPegawai || item.nip,
       nip: item.nip,
@@ -205,7 +238,8 @@ export default function KepegawaianPage() {
       unit: item.unit,
       statusPegawai: item.status,
       sisaJatahCuti: item.sisaJatahCuti ?? 12,
-      idPeran: item.idPeran || "",
+      idPeran: perans[0] || "",
+      idPeranList: perans,
     });
     setShowManageModal(false);
     setShowEditModal(true);
@@ -216,6 +250,10 @@ export default function KepegawaianPage() {
     setIsSubmitting(true);
     setModalError(null);
     const targetId = editFormData.idPegawai || editFormData.nip;
+
+    const perans = editFormData.idPeranList.length > 0
+      ? editFormData.idPeranList
+      : (editFormData.idPeran ? [editFormData.idPeran] : []);
 
     try {
       await hrdService.ubahPegawai(targetId, {
@@ -228,8 +266,12 @@ export default function KepegawaianPage() {
         unitKerja: editFormData.unit,
         statusPegawai: editFormData.statusPegawai,
         sisaJatahCuti: Number(editFormData.sisaJatahCuti) || 12,
-        idPeran: editFormData.idPeran || null,
+        idPeran: perans[0] || null,
+        idPeranList: perans,
       });
+
+      const peransNama = perans
+        .map((pid) => masterPeran.find((m) => m.idPeran === pid)?.namaPeran || pid);
 
       setPegawaiList((prev) =>
         prev.map((item) =>
@@ -245,7 +287,9 @@ export default function KepegawaianPage() {
                 unit: editFormData.unit,
                 status: editFormData.statusPegawai,
                 sisaJatahCuti: Number(editFormData.sisaJatahCuti) || 12,
-                idPeran: editFormData.idPeran || null,
+                idPeran: perans[0] || null,
+                idPeranList: perans,
+                peranListNama: peransNama,
               }
             : item
         )
@@ -419,7 +463,19 @@ export default function KepegawaianPage() {
                     )}
                   </td>
                   <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-[#3F3F3F] whitespace-nowrap">
-                    {item.jabatan}
+                    <div>{item.jabatan}</div>
+                    {item.peranListNama && item.peranListNama.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.peranListNama.map((pName, pIdx) => (
+                          <span
+                            key={pIdx}
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#E8E5FA] text-[#4731B6]"
+                          >
+                            {pName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 sm:py-4 sm:px-6 text-[#3F3F3F] whitespace-nowrap">
                     {item.unit}
@@ -597,7 +653,7 @@ export default function KepegawaianPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[#202020]">Status Pegawai</label>
                   <select
@@ -623,21 +679,68 @@ export default function KepegawaianPage() {
                     className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
                   />
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#202020]">Peran Tenaga Medis</label>
-                  <select
-                    value={formData.idPeran}
-                    onChange={(e) => setFormData({ ...formData, idPeran: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
-                  >
-                    <option value="">-- Belum Ditentukan --</option>
-                    {masterPeran.map((p) => (
-                      <option key={p.idPeran} value={p.idPeran}>
-                        {p.namaPeran}
-                      </option>
-                    ))}
-                  </select>
+              {/* Peran Tenaga Medis (Lebar Penuh) */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#202020] flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-[#4731B6]" />
+                    <span>Peran Tenaga Medis (Bisa pilih lebih dari satu)</span>
+                  </label>
+                  <span className="text-[11px] font-semibold text-[#4731B6] bg-[#F2F1F9] px-2.5 py-0.5 rounded-full border border-[#E0DCF8]">
+                    {formData.idPeranList.length} peran dipilih
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7E7E7E]">
+                  Centang satu atau lebih peran fungsional klinis untuk pegawai ini:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 p-3.5 bg-[#F8F7FD] rounded-2xl max-h-52 overflow-y-auto border border-[#E0DCF8] shadow-inner">
+                  {masterPeran.map((p) => {
+                    const isChecked = formData.idPeranList.includes(p.idPeran);
+                    return (
+                      <label
+                        key={p.idPeran}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs cursor-pointer border transition-all select-none ${
+                          isChecked
+                            ? "bg-white border-[#4731B6] text-[#4731B6] font-semibold shadow-xs ring-1 ring-[#4731B6]"
+                            : "bg-white/80 border-gray-200 text-[#3F3F3F] hover:bg-white hover:border-[#8D7BE4]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                idPeranList: [...prev.idPeranList, p.idPeran],
+                                idPeran: prev.idPeran || p.idPeran,
+                              }));
+                            } else {
+                              setFormData((prev) => {
+                                const nextList = prev.idPeranList.filter((id) => id !== p.idPeran);
+                                return {
+                                  ...prev,
+                                  idPeranList: nextList,
+                                  idPeran: nextList[0] || "",
+                                };
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-[#4731B6] rounded accent-[#4731B6] mt-0.5 shrink-0"
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate leading-tight font-medium">{p.namaPeran}</span>
+                          {p.kategori && (
+                            <span className="text-[10px] text-[#7E7E7E] font-normal truncate mt-0.5">
+                              {p.kategori}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -778,7 +881,7 @@ export default function KepegawaianPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-[#202020]">Status Pegawai</label>
                   <select
@@ -804,21 +907,68 @@ export default function KepegawaianPage() {
                     className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
                   />
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-[#202020]">Peran Tenaga Medis</label>
-                  <select
-                    value={editFormData.idPeran}
-                    onChange={(e) => setEditFormData({ ...editFormData, idPeran: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-gray-300 text-xs sm:text-sm text-[#202020] focus:ring-2 focus:ring-[#4731B6] outline-none"
-                  >
-                    <option value="">-- Belum Ditentukan --</option>
-                    {masterPeran.map((p) => (
-                      <option key={p.idPeran} value={p.idPeran}>
-                        {p.namaPeran}
-                      </option>
-                    ))}
-                  </select>
+              {/* Peran Tenaga Medis (Lebar Penuh) */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-[#202020] flex items-center gap-1.5">
+                    <Briefcase className="w-4 h-4 text-[#4731B6]" />
+                    <span>Peran Tenaga Medis (Bisa pilih lebih dari satu)</span>
+                  </label>
+                  <span className="text-[11px] font-semibold text-[#4731B6] bg-[#F2F1F9] px-2.5 py-0.5 rounded-full border border-[#E0DCF8]">
+                    {editFormData.idPeranList.length} peran dipilih
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#7E7E7E]">
+                  Centang satu atau lebih peran fungsional klinis untuk pegawai ini:
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 p-3.5 bg-[#F8F7FD] rounded-2xl max-h-52 overflow-y-auto border border-[#E0DCF8] shadow-inner">
+                  {masterPeran.map((p) => {
+                    const isChecked = editFormData.idPeranList.includes(p.idPeran);
+                    return (
+                      <label
+                        key={p.idPeran}
+                        className={`flex items-start gap-2.5 p-2.5 rounded-xl text-xs cursor-pointer border transition-all select-none ${
+                          isChecked
+                            ? "bg-white border-[#4731B6] text-[#4731B6] font-semibold shadow-xs ring-1 ring-[#4731B6]"
+                            : "bg-white/80 border-gray-200 text-[#3F3F3F] hover:bg-white hover:border-[#8D7BE4]"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                idPeranList: [...prev.idPeranList, p.idPeran],
+                                idPeran: prev.idPeran || p.idPeran,
+                              }));
+                            } else {
+                              setEditFormData((prev) => {
+                                const nextList = prev.idPeranList.filter((id) => id !== p.idPeran);
+                                return {
+                                  ...prev,
+                                  idPeranList: nextList,
+                                  idPeran: nextList[0] || "",
+                                };
+                              });
+                            }
+                          }}
+                          className="w-4 h-4 text-[#4731B6] rounded accent-[#4731B6] mt-0.5 shrink-0"
+                        />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate leading-tight font-medium">{p.namaPeran}</span>
+                          {p.kategori && (
+                            <span className="text-[10px] text-[#7E7E7E] font-normal truncate mt-0.5">
+                              {p.kategori}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

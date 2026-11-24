@@ -33,7 +33,7 @@ interface PayrollEmployee {
 }
 
 export default function KeuanganKelolaGajiPage() {
-  const [selectedPeriod, setSelectedPeriod] = useState<string>("Mei 2025");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("Semua Periode");
   const [search, setSearch] = useState<string>("");
   const [unitFilter, setUnitFilter] = useState<string>("Semua");
   const [statusFilter, setStatusFilter] = useState<string>("Semua");
@@ -52,153 +52,52 @@ export default function KeuanganKelolaGajiPage() {
     }).format(val);
   };
 
-  const [employees, setEmployees] = useState<PayrollEmployee[]>([
-    {
-      id: "PAY-001",
-      nip: "198904122014022001",
-      nama: "Ns. Ayu Lestari, S.Kep., Ns.",
-      unit: "Unit Rawat Inap",
-      jabatan: "Perawat Pelaksana",
-      periode: "Mei 2025",
-      gajiPokok: 5250000,
-      tunjangan: 3000000,
-      potongan: 1370000,
-      gajiDidapatkan: 6880000,
-      status: "Terbayar",
-      bank: "Mandiri 1400018482103",
-      tanggalTransfer: "30 Mei 2025",
-    },
-    {
-      id: "PAY-002",
-      nip: "198811032013011002",
-      nama: "Bima Pratama, A.Md.Kep.",
-      unit: "Unit Rawat Inap",
-      jabatan: "Perawat Pelaksana",
-      periode: "Mei 2025",
-      gajiPokok: 4850000,
-      tunjangan: 2500000,
-      potongan: 1150000,
-      gajiDidapatkan: 6200000,
-      status: "Terbayar",
-      bank: "Mandiri 1400018482188",
-      tanggalTransfer: "30 Mei 2025",
-    },
-    {
-      id: "PAY-003",
-      nip: "198006122007011002",
-      nama: "dr. Hendra Wijaya, Sp.A",
-      unit: "Poliklinik Anak",
-      jabatan: "Dokter Spesialis",
-      periode: "Mei 2025",
-      gajiPokok: 12500000,
-      tunjangan: 9800000,
-      potongan: 3200000,
-      gajiDidapatkan: 19100000,
-      status: "Terbayar",
-      bank: "BCA 8219028192",
-      tanggalTransfer: "30 Mei 2025",
-    },
-    {
-      id: "PAY-004",
-      nip: "199103202015022002",
-      nama: "Rizky Ramadhani, A.Md.",
-      unit: "Unit Rawat Inap",
-      jabatan: "Sekretaris Unit",
-      periode: "Mei 2025",
-      gajiPokok: 4500000,
-      tunjangan: 2100000,
-      potongan: 950000,
-      gajiDidapatkan: 5650000,
-      status: "Terbayar",
-      bank: "Mandiri 1400019201923",
-      tanggalTransfer: "30 Mei 2025",
-    },
-    {
-      id: "PAY-005",
-      nip: "198205152008011003",
-      nama: "Athaya Rahmania, S.Psi.",
-      unit: "Divisi SDM & HRD",
-      jabatan: "Staff Senior HRD",
-      periode: "Mei 2025",
-      gajiPokok: 6200000,
-      tunjangan: 2600000,
-      potongan: 1350000,
-      gajiDidapatkan: 7450000,
-      status: "Terbayar",
-      bank: "Mandiri 1400019920194",
-      tanggalTransfer: "30 Mei 2025",
-    },
-    {
-      id: "PAY-006",
-      nip: "199402182019022005",
-      nama: "Ns. Dewi Sartika, S.Kep.",
-      unit: "Kamar Bedah (OK)",
-      jabatan: "Perawat Bedah",
-      periode: "Mei 2025",
-      gajiPokok: 5250000,
-      tunjangan: 3100000,
-      potongan: 1300000,
-      gajiDidapatkan: 7050000,
-      status: "Diproses",
-      bank: "BNI 0829102910",
-      tanggalTransfer: "Menunggu Approval",
-    },
-    {
-      id: "PAY-007",
-      nip: "199205142018022004",
-      nama: "Ns. Rani Oktavia, S.Kep.",
-      unit: "Unit Rawat Inap",
-      jabatan: "Perawat Pelaksana",
-      periode: "Mei 2025",
-      gajiPokok: 5000000,
-      tunjangan: 2800000,
-      potongan: 1250000,
-      gajiDidapatkan: 6550000,
-      status: "Diproses",
-      bank: "Mandiri 1400019829102",
-      tanggalTransfer: "Menunggu Approval",
-    },
-  ]);
+  const [employees, setEmployees] = useState<PayrollEmployee[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  useEffect(() => {
-    async function loadGaji() {
-      setIsLoading(true);
-      try {
-        const data = await penggajianService.daftarGaji();
-        if (data && data.length > 0) {
-          const mapped: PayrollEmployee[] = data.map((g: PenggajianItem) => {
-            const pokok = Number(g.gajiPokok) || 5000000;
-            const tunj = Number(g.tunjangan) || 1000000;
-            const pot = Number(g.potongan) || 0;
-            const net = pokok + tunj - pot;
-            return {
-              id: g.idGaji,
-              nip: g.pegawai?.nip || "-",
-              nama: g.pegawai?.nama || "Pegawai",
-              unit: g.pegawai?.unitKerja || "Unit Rawat Inap",
-              jabatan: g.pegawai?.jabatan || "Tenaga Medis",
-              periode: g.periodeGaji,
-              gajiPokok: pokok,
-              tunjangan: tunj,
-              potongan: pot,
-              gajiDidapatkan: net,
-              status: g.statusPembayaran === "Lunas" || g.statusPembayaran === "Terbayar" ? "Terbayar" : "Diproses",
-              bank: "Mandiri",
-              tanggalTransfer: g.statusPembayaran === "Lunas" ? "Terbayar" : "Menunggu Approval",
-            };
-          });
-          setEmployees(mapped);
-        }
-      } catch {
-        // Fallback default
-      } finally {
-        setIsLoading(false);
+  async function loadGaji() {
+    setIsLoading(true);
+    try {
+      const data = await penggajianService.daftarGaji();
+      if (data && data.length > 0) {
+        const mapped: PayrollEmployee[] = data.map((g: PenggajianItem) => {
+          const pokok = Number(g.gajiPokok) || 0;
+          const tunj = Number(g.tunjangan) || 0;
+          const pot = Number(g.potongan) || 0;
+          const net = pokok + tunj - pot;
+          return {
+            id: g.idGaji,
+            nip: g.pegawai?.nip || "-",
+            nama: g.pegawai?.nama || "Pegawai",
+            unit: g.pegawai?.unitKerja || "-",
+            jabatan: g.pegawai?.jabatan || "-",
+            periode: g.periodeGaji,
+            gajiPokok: pokok,
+            tunjangan: tunj,
+            potongan: pot,
+            gajiDidapatkan: net,
+            status: g.statusPembayaran === "Lunas" || g.statusPembayaran === "Terbayar" ? "Terbayar" : "Diproses",
+            bank: "-",
+            tanggalTransfer: g.statusPembayaran === "Lunas" || g.statusPembayaran === "Terbayar" ? "Terbayar" : "Menunggu Approval",
+          };
+        });
+        setEmployees(mapped);
+      } else {
+        setEmployees([]);
       }
+    } catch {
+      setEmployees([]);
+    } finally {
+      setIsLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadGaji();
   }, []);
+
+  const availablePeriods = Array.from(new Set(employees.map((e) => e.periode).filter(Boolean)));
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
@@ -208,8 +107,10 @@ export default function KeuanganKelolaGajiPage() {
 
     const matchesUnit = unitFilter === "Semua" || emp.unit === unitFilter;
     const matchesStatus = statusFilter === "Semua" || emp.status === statusFilter;
+    const matchesPeriod =
+      selectedPeriod === "Semua" || selectedPeriod === "Semua Periode" || emp.periode === selectedPeriod;
 
-    return matchesSearch && matchesUnit && matchesStatus;
+    return matchesSearch && matchesUnit && matchesStatus && matchesPeriod;
   });
 
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
@@ -228,13 +129,25 @@ export default function KeuanganKelolaGajiPage() {
 
   const totalPegawaiTerbayar = employees.filter((e) => e.status === "Terbayar").length;
 
-  const handleDisbursePayroll = () => {
-    setEmployees((prev) =>
-      prev.map((e) => ({ ...e, status: "Terbayar" as const, tanggalTransfer: "30 Mei 2025" }))
-    );
-    setToastMessage("Pencairan payroll seluruh pegawai berhasil diproses ke Bank Partner!");
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3500);
+  const handleDisbursePayroll = async () => {
+    const unpaidIds = employees.filter((e) => e.status !== "Terbayar").map((e) => e.id);
+    if (unpaidIds.length === 0) {
+      setToastMessage("Semua gaji pada daftar sudah berstatus Terbayar.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+      return;
+    }
+    try {
+      await penggajianService.bayarGajiBulk({ idGajiList: unpaidIds });
+      await loadGaji();
+      setToastMessage("Pencairan payroll seluruh pegawai berhasil diproses ke database dan Bank Partner!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+    } catch (err: any) {
+      setToastMessage(err?.message || "Gagal memproses pencairan payroll.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+    }
   };
 
   return (
@@ -261,11 +174,12 @@ export default function KeuanganKelolaGajiPage() {
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="px-3 py-1.5 rounded-xl bg-[#F2F1F9] text-xs sm:text-sm font-bold text-[#4731B6] border border-[#C4BAF5] cursor-pointer focus:outline-none"
           >
-            <option value="Mei 2025">Mei 2025 (Aktif)</option>
-            <option value="April 2025">April 2025</option>
-            <option value="Maret 2025">Maret 2025</option>
-            <option value="Februari 2025">Februari 2025</option>
-            <option value="Januari 2025">Januari 2025</option>
+            <option value="Semua Periode">Semua Periode</option>
+            {availablePeriods.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan Pengujian - Testing_Nama_NIM</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 15mm 15mm 15mm;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #1e293b;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+    }
+    .page {
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 10px 20px;
+      box-sizing: border-box;
+    }
+    .page-break {
+      page-break-before: always;
+      margin-top: 25px;
+    }
+    .header-box {
+      border: 1.5px solid #0284c7;
+      background: #f0f9ff;
+      border-radius: 8px;
+      padding: 12px 18px;
+      margin-bottom: 14px;
+    }
+    .header-title {
+      font-size: 13pt;
+      font-weight: 700;
+      color: #0369a1;
+      text-transform: uppercase;
+      text-align: center;
+      margin: 0 0 8px 0;
+      letter-spacing: 0.5px;
+    }
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9.5pt;
+    }
+    .meta-table td {
+      padding: 2px 6px;
+      vertical-align: top;
+    }
+    .meta-label {
+      width: 130px;
+      font-weight: 600;
+      color: #334155;
+    }
+    h2 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #0f172a;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 4px;
+      margin-top: 12px;
+      margin-bottom: 8px;
+    }
+    p, li {
+      margin: 4px 0;
+      font-size: 9.5pt;
+    }
+    ul, ol {
+      margin: 4px 0 8px 18px;
+      padding: 0;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: 'Consolas', 'Fira Code', Courier, monospace;
+      font-size: 8pt;
+      line-height: 1.35;
+      overflow-x: auto;
+      margin: 6px 0;
+    }
+    code {
+      font-family: 'Consolas', monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+      color: #0369a1;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+    .test-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8.5pt;
+      margin-top: 8px;
+    }
+    .test-table th, .test-table td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+    .test-table th {
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 600;
+      text-align: left;
+    }
+    .test-table tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .badge-pass {
+      display: inline-block;
+      background: #16a34a;
+      color: white;
+      font-weight: bold;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 8pt;
+      text-align: center;
+    }
+    .badge-branch {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 600;
+      font-size: 7.5pt;
+      display: inline-block;
+      margin-bottom: 2px;
+    }
+    .conclusion-box {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: #ecfdf5;
+      border-left: 4px solid #10b981;
+      border-radius: 4px;
+      font-size: 9pt;
+    }
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HALAMAN 1 -->
+  <div class="page">
+    <div class="header-box">
+      <div class="header-title">Laporan Dokumentasi Pengujian Perangkat Lunak (White-Box Testing)</div>
+      <table class="meta-table">
+        <tr>
+          <td class="meta-label">Nama</td>
+          <td>: <strong>Rifky Cahya Setyaji</strong></td>
+          <td class="meta-label">Kelompok</td>
+          <td>: <strong>[Isi Kelompok Anda]</strong></td>
+        </tr>
+        <tr>
+          <td class="meta-label">NIM</td>
+          <td>: <strong>[Isi NIM Anda]</strong></td>
+          <td class="meta-label">Topik SI</td>
+          <td>: <strong>Sistem Informasi Manajemen RS & HRIS (RSI Medika)</strong></td>
+        </tr>
+        <tr>
+          <td class="meta-label">Fitur / Modul</td>
+          <td colspan="3">: <strong>Fitur Penggajian dan Kepegawaian (Payroll & Healthcare Staff)</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <h2>1. Deskripsi Singkat Fungsi yang Diuji</h2>
+    <p>Fungsi yang diuji adalah <code>hitungKomponenGaji(pedoman, metrik)</code> yang terletak pada modul backend <code>web-be/src/services/penggajian.service.js</code>.</p>
+    <p><strong>Deskripsi & Logika Bisnis:</strong></p>
+    <ul>
+      <li><strong>Tujuan:</strong> Menghitung rincian slip penghasilan bulanan pegawai/tenaga medis rumah sakit secara deterministik dan terlindungi dari kesalahan aritmatika.</li>
+      <li><strong>Input:</strong> Objek <code>pedoman</code> (master tarif: gaji pokok, tunjangan jabatan, rate shift malam, rate lembur/jam, kehadiran, insentif jasa medis, rate alpa, denda terlambat) dan objek <code>metrik</code> (rekap kehadiran, jam lembur, nilai jasa medis, serta penyesuaian manual).</li>
+      <li><strong>Sanitasi & Batasan Domain:</strong> Semua parameter operasional absensi diproteksi dengan <code>Math.max(0, Number(val ?? 0))</code> agar nilai negatif atau kosong tidak merusak perhitungan.</li>
+      <li><strong>Proteksi Percabangan (Branch Defense):</strong> Nilai tunjangan di-clamp ke $\ge 0$, total potongan di-clamp ke $\ge 0$, dan total gaji bersih (net salary) dijamin $\ge 0$ melalui <code>Math.max(0, round2(totalPendapatan - potongan))</code> untuk mencegah kalkulasi minus ketika akumulasi potongan melebihi pendapatan.</li>
+    </ul>
+
+    <h2>2. Potongan Source Code Fungsi</h2>
+    <pre><code>/** Hitung rincian komponen gaji sesuai rumus fungsi SQL hitung_gaji_tenaga_medis. */
+export function hitungKomponenGaji(pedoman, metrik = {}) {
+  // [Node 1] Sanitasi nilai metrik (Domain & Boundary Handling)
+  const jumlahShiftMalam = Math.max(0, Number(metrik.jumlahShiftMalam ?? 0));
+  const jamLembur = Math.max(0, Number(metrik.jamLembur ?? 0));
+  const hariHadir = Math.max(0, Number(metrik.hariHadir ?? 0));
+  const nilaiJasaMedis = Math.max(0, Number(metrik.nilaiJasaMedis ?? 0));
+  const hariAlpa = Math.max(0, Number(metrik.hariAlpa ?? 0));
+  const jumlahTerlambat = Math.max(0, Number(metrik.jumlahTerlambat ?? 0));
+  const tunjanganTambahan = Number(metrik.tunjanganTambahan ?? 0);
+  const potonganTambahan = Number(metrik.potonganTambahan ?? 0);
+
+  // [Node 2] Perhitungan komponen pendapatan dan tunjangan
+  const gajiPokok = num(pedoman.gajiPokok);
+  const tunjanganJabatan = num(pedoman.tunjanganJabatan);
+  const tunjanganShiftMalam = round2(jumlahShiftMalam * num(pedoman.tunjanganShiftMalam));
+  const uangLembur = round2(jamLembur * num(pedoman.uangLemburPerJam));
+  const tunjanganKehadiran = round2(hariHadir * num(pedoman.tunjanganKehadiranPerHari));
+  const insentifJasaMedis = round2((nilaiJasaMedis * num(pedoman.persenInsentifJasaMedis)) / 100);
+
+  // [Decision 1 / Branch 1-2] Validasi total tunjangan non-negatif
+  const tunjangan = Math.max(
+    0,
+    round2(tunjanganJabatan + tunjanganShiftMalam + uangLembur + tunjanganKehadiran + insentifJasaMedis + tunjanganTambahan),
+  );
+
+  // [Node 3] Perhitungan komponen potongan
+  const potonganTidakHadir = round2(hariAlpa * num(pedoman.potonganTidakHadirPerHari));
+  const potonganTerlambat = round2(jumlahTerlambat * num(pedoman.potonganTerlambatPerKejadian));
+  
+  // [Decision 2 / Branch 3-4] Validasi total potongan non-negatif
+  const potongan = Math.max(0, round2(potonganTidakHadir + potonganTerlambat + potonganTambahan));
+
+  // [Decision 3 / Branch 5-6] Validasi total gaji bersih non-negatif
+  const totalPendapatan = round2(gajiPokok + tunjangan);
+  const totalGaji = Math.max(0, round2(totalPendapatan - potongan));
+
+  return {
+    idPedoman: pedoman.idPedoman, gajiPokok,
+    rincianTunjangan: { tunjanganJabatan, tunjanganShiftMalam, uangLembur, tunjanganKehadiran, insentifJasaMedis, tunjanganTambahan: round2(tunjanganTambahan) },
+    tunjangan,
+    rincianPotongan: { potonganTidakHadir, potonganTerlambat, potonganTambahan: round2(potonganTambahan) },
+    potongan, totalPendapatan, totalGaji,
+  };
+}</code></pre>
+  </div>
+
+  <!-- HALAMAN 2 -->
+  <div class="page page-break">
+    <h2>3. Tabel Pengujian (Branch Testing & Domain Testing)</h2>
+    <p style="font-size: 8.5pt; color: #475569; margin-bottom: 6px;">
+      <strong>Baseline Pedoman Penggajian:</strong> Gaji Pokok: Rp 5.000.000, Tunj. Jabatan: Rp 1.000.000, Shift Malam: Rp 75.000/shift, Lembur: Rp 50.000/jam, Tunj. Kehadiran: Rp 25.000/hari, Insentif Medis: 5%, Denda Alpa: Rp 150.000/hari, Denda Terlambat: Rp 50.000/kejadian.
+    </p>
+
+    <table class="test-table">
+      <thead>
+        <tr>
+          <th style="width: 55px;">ID Uji</th>
+          <th style="width: 140px;">Metode & Target Branch / Domain</th>
+          <th style="width: 160px;">Input (Metrik Pegawai)</th>
+          <th>Expected Result</th>
+          <th>Actual Result</th>
+          <th style="width: 45px; text-align: center;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>TC-01</strong></td>
+          <td>
+            <span class="badge-branch">Branch Testing</span><br>
+            Jalur Normal:<br>
+            • Tunjangan &gt; 0 (True)<br>
+            • Potongan &gt; 0 (True)<br>
+            • Net Gaji &gt; 0 (True)
+          </td>
+          <td>
+            • Shift Malam: 4<br>
+            • Jam Lembur: 10<br>
+            • Hari Hadir: 20<br>
+            • Jasa Medis: Rp 10.000.000<br>
+            • Hari Alpa: 1<br>
+            • Terlambat: 2<br>
+            • Tunj. Tambahan: Rp 200.000
+          </td>
+          <td>
+            • Tunjangan = Rp 3.000.000<br>
+            • Pendapatan = Rp 8.000.000<br>
+            • Potongan = Rp 250.000<br>
+            • <strong>Total Gaji = Rp 7.750.000</strong>
+          </td>
+          <td>
+            • Tunjangan = Rp 3.000.000<br>
+            • Pendapatan = Rp 8.000.000<br>
+            • Potongan = Rp 250.000<br>
+            • <strong>Total Gaji = Rp 7.750.000</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+
+        <tr>
+          <td><strong>TC-02</strong></td>
+          <td>
+            <span class="badge-branch">Domain Testing</span><br>
+            Boundary Kosong / Nol:<br>
+            • Input metrik kosong <code>{}</code><br>
+            • Fallback <code>?? 0</code> aktif
+          </td>
+          <td>
+            <code>metrik = {}</code><br>
+            *(Tanpa jam lembur, alpa, jasa medis, shift)*
+          </td>
+          <td>
+            • Tunjangan = Rp 1.000.000<br>
+            • Potongan = Rp 0<br>
+            • <strong>Total Gaji = Rp 6.000.000</strong>
+          </td>
+          <td>
+            • Tunjangan = Rp 1.000.000<br>
+            • Potongan = Rp 0<br>
+            • <strong>Total Gaji = Rp 6.000.000</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+
+        <tr>
+          <td><strong>TC-03</strong></td>
+          <td>
+            <span class="badge-branch">Branch Testing</span><br>
+            Branch Defense Gaji Minus:<br>
+            • Potongan &gt; Pendapatan<br>
+            • Branch <code>Math.max(0, net)</code>
+          </td>
+          <td>
+            • Hari Alpa: 10 (Rp 1.500.000)<br>
+            • Potongan Tambahan: Rp 10.000.000<br>
+            *(Total Potongan: Rp 11.500.000)*
+          </td>
+          <td>
+            • Potongan = Rp 11.500.000<br>
+            • Pendapatan = Rp 6.000.000<br>
+            • <strong>Total Gaji = Rp 0</strong><br>
+            *(Tidak bernilai negatif)*
+          </td>
+          <td>
+            • Potongan = Rp 11.500.000<br>
+            • Pendapatan = Rp 6.000.000<br>
+            • <strong>Total Gaji = Rp 0</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+
+        <tr>
+          <td><strong>TC-04</strong></td>
+          <td>
+            <span class="badge-branch">Branch Testing</span><br>
+            Branch Defense Tunjangan Minus:<br>
+            • Tunjangan akumulasi &lt; 0<br>
+            • Branch <code>Math.max(0, tunj)</code>
+          </td>
+          <td>
+            • Tunjangan Tambahan: -Rp 2.000.000<br>
+            *(Mengimbangi tunj. jabatan Rp 1.000.000)*
+          </td>
+          <td>
+            • Tunjangan = <strong>Rp 0</strong> *(clamp)*<br>
+            • Pendapatan = Rp 5.000.000<br>
+            • <strong>Total Gaji = Rp 5.000.000</strong>
+          </td>
+          <td>
+            • Tunjangan = <strong>Rp 0</strong><br>
+            • Pendapatan = Rp 5.000.000<br>
+            • <strong>Total Gaji = Rp 5.000.000</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+
+        <tr>
+          <td><strong>TC-05</strong></td>
+          <td>
+            <span class="badge-branch">Domain Testing</span><br>
+            Boundary Nilai Negatif:<br>
+            • Evaluasi sanitasi <code>Math.max(0, x)</code>
+          </td>
+          <td>
+            • Jam Lembur: -5 jam<br>
+            • Hari Hadir: -2 hari<br>
+            *(Input anomali)*
+          </td>
+          <td>
+            • Nilai negatif diabaikan (dikonversi ke 0)<br>
+            • <strong>Total Gaji = Rp 6.000.000</strong>
+          </td>
+          <td>
+            • Nilai negatif terfilter menjadi 0<br>
+            • <strong>Total Gaji = Rp 6.000.000</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+
+        <tr>
+          <td><strong>TC-06</strong></td>
+          <td>
+            <span class="badge-branch">Domain Testing</span><br>
+            Presisi Desimal Pecahan:<br>
+            • Evaluasi fungsi pembulatan <code>round2</code>
+          </td>
+          <td>
+            • Nilai Jasa Medis: Rp 3.333.333,33<br>
+            • Tarif insentif: 5%<br>
+            *(Hasil mentah: 166.666,6665)*
+          </td>
+          <td>
+            • Insentif = Rp 166.666,67<br>
+            • Tunjangan = Rp 1.166.666,67<br>
+            • <strong>Total Gaji = Rp 6.166.666,67</strong>
+          </td>
+          <td>
+            • Insentif = Rp 166.666,67<br>
+            • Tunjangan = Rp 1.166.666,67<br>
+            • <strong>Total Gaji = Rp 6.166.666,67</strong>
+          </td>
+          <td style="text-align: center;"><span class="badge-pass">PASS</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="conclusion-box">
+      <strong>Kesimpulan Pengujian:</strong> Seluruh skenario pengujian unit berbasis <em>White-Box Testing</em> (<em>Branch Coverage</em> dan <em>Domain Boundary Analysis</em>) pada fungsi <code>hitungKomponenGaji</code> fitur penggajian &amp; pegawai RSI Medika berhasil dieksekusi dengan status <strong>100% PASS</strong>. Fungsi terbukti mampu menangani kalkulasi normal, sanitasi nilai batas/negatif, presisi pembulatan dua desimal mata uang, serta proteksi terhadap nilai minus pada total slip gaji.
+    </div>
+  </div>
+
+</body>
+</html>

@@ -15,103 +15,64 @@ import {
   Calendar,
   AlertCircle,
   Activity,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
-import { bandingGajiService } from "@/shared/services/api/banding-gaji.service";
-import { pedomanGajiService } from "@/shared/services/api/pedoman-gaji.service";
-import { hrdService } from "@/shared/services/api/hrd.service";
-import { BandingGajiItem } from "@/shared/types/api";
+import { dashboardService } from "@/shared/services/api/dashboard.service";
+import { HrdDashboardData } from "@/shared/types/api";
+
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export default function HRDDashboard() {
   const { user } = useAuth();
-  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
-  const [pendingBandingCount, setPendingBandingCount] = useState<number>(4);
-  const [totalPedomanCount, setTotalPedomanCount] = useState<number>(12);
-  const [pegawaiTanpaAkunCount, setPegawaiTanpaAkunCount] = useState<number>(0);
-  const [recentBandingList, setRecentBandingList] = useState<
-    { title: string; subtitle: string; status: "Disetujui" | "Menunggu" | "Diproses" | "Ditolak" }[]
-  >([
-    {
-      title: "Pengajuan Banding Gaji · Ns. Ayu Lestari (Tunjangan Shift Malam)",
-      subtitle: "Hari ini · 09.24 · Unit Rawat Inap",
-      status: "Diproses",
-    },
-    {
-      title: "Pengajuan Cuti Tahunan · dr. Hendra Wijaya, Sp.A (3 Hari)",
-      subtitle: "Kemarin · 15.12 · Poliklinik Anak",
-      status: "Disetujui",
-    },
-    {
-      title: "Koreksi Presensi Fingerprint · Bima Pratama, A.Md.Kep.",
-      subtitle: "08 Mei 2025 · 10.45 · Shift Siang",
-      status: "Disetujui",
-    },
-  ]);
+  const [todayFormatted] = useState<string>(getFormattedDate);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [data, setData] = useState<HrdDashboardData | null>(null);
 
   useEffect(() => {
-    const now = new Date();
-    setTodayFormatted(
-      now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    );
-
-    async function loadHRDData() {
+    let isMounted = true;
+    async function loadData() {
       try {
-        const [bandings, pedomans, pTanpaAkun] = await Promise.allSettled([
-          bandingGajiService.daftarBanding(),
-          pedomanGajiService.daftarPedoman(),
-          hrdService.pegawaiTanpaAkun(),
-        ]);
-
-        if (bandings.status === "fulfilled" && bandings.value) {
-          const items = bandings.value;
-          const pending = items.filter(
-            (b: BandingGajiItem) => b.status === "MENUNGGU" || b.status === "DIPROSES"
-          ).length;
-          setPendingBandingCount(pending || items.length);
-
-          if (items.length > 0) {
-            const mapped = items.slice(0, 3).map((b: BandingGajiItem) => ({
-              title: `Banding Gaji · ${b.pegawai?.nama || "Pegawai"} (${b.periodeGaji})`,
-              subtitle: b.alasanBanding || "Pengajuan selisih tunjangan / lembur",
-              status: (b.status === "DISETUJUI"
-                ? "Disetujui"
-                : b.status === "DITOLAK"
-                ? "Ditolak"
-                : "Diproses") as "Disetujui" | "Menunggu" | "Diproses" | "Ditolak",
-            }));
-            setRecentBandingList(mapped);
-          }
+        const res = await dashboardService.getHrdDashboard();
+        if (isMounted && res) {
+          setData(res);
         }
-
-        if (pedomans.status === "fulfilled" && pedomans.value) {
-          setTotalPedomanCount(pedomans.value.length || 12);
-        }
-
-        if (pTanpaAkun.status === "fulfilled" && pTanpaAkun.value) {
-          setPegawaiTanpaAkunCount(pTanpaAkun.value.length);
-        }
-      } catch {
-        // Fallback default
+      } catch (err) {
+        console.error("Gagal memuat dashboard HRD dari backend:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
-    loadHRDData();
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const weeklyAttendance = [
-    { day: "Sen", percent: 96.2, present: 238 },
-    { day: "Sel", percent: 94.8, present: 235, active: true },
-    { day: "Rab", percent: 97.0, present: 240 },
-    { day: "Kam", percent: 95.5, present: 236 },
-    { day: "Jum", percent: 93.8, present: 232 },
-    { day: "Sab", percent: 91.2, present: 198 },
-    { day: "Min", percent: 89.5, present: 185 },
-  ];
+  const metrics = data?.metrics || {
+    totalPegawaiAktif: 0,
+    rekrutmenBaruBulanIni: 0,
+    tingkatKehadiranHariIni: 0,
+    kehadiranDetail: { hadir: 0, izinSakit: 0, cuti: 0 },
+    pendingBandingCount: 0,
+    totalPedomanCount: 0,
+    pegawaiTanpaAkunCount: 0,
+    kepatuhanOnTime: 0,
+  };
+
+  const distribusiDivisi = data?.distribusiDivisi || [];
+  const statusKepegawaian = data?.statusKepegawaian || { tetap: 0, kontrak: 0 };
+  const weeklyAttendance = data?.trenKehadiranMingguan || [];
+  const shiftMonitoring = data?.shiftMonitoring || { pagi: 0, siang: 0, malam: 0 };
+  const recentActivities = data?.recentActivities || [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -139,6 +100,11 @@ export default function HRDDashboard() {
               <span className="w-1.5 h-1.5 rounded-full bg-[#0E6100] animate-pulse" />
               Sistem SDM Aktif & Terintegrasi
             </span>
+            {isLoading && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#4731B6] font-medium">
+                <Loader2 className="w-3 h-3 animate-spin" /> Sinkron data...
+              </span>
+            )}
           </div>
 
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#202020] tracking-tight">
@@ -160,10 +126,10 @@ export default function HRDDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#4731B6] tracking-tight">
-              248
+              {metrics.totalPegawaiAktif}
             </div>
             <p className="text-[11px] text-[#0E6100] font-medium mt-0.5 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> +4 rekrutmen baru bulan ini
+              <TrendingUp className="w-3 h-3" /> +{metrics.rekrutmenBaruBulanIni} rekrutmen bulan ini
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
@@ -179,14 +145,14 @@ export default function HRDDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#202020] tracking-tight">
-              94.8%
+              {metrics.tingkatKehadiranHariIni}%
             </div>
             <p className="text-[11px] text-[#5F5F5F] font-medium mt-0.5">
-              235 Hadir · 8 Izin/Sakit · 5 Cuti
+              {metrics.kehadiranDetail.hadir} Hadir · {metrics.kehadiranDetail.izinSakit} Izin/Sakit · {metrics.kehadiranDetail.cuti} Cuti
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#0E6100] h-full rounded-full" style={{ width: "94.8%" }} />
+            <div className="bg-[#0E6100] h-full rounded-full" style={{ width: `${Math.min(metrics.tingkatKehadiranHariIni, 100)}%` }} />
           </div>
         </div>
 
@@ -198,14 +164,14 @@ export default function HRDDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#F39C12] tracking-tight">
-              {pendingBandingCount} Berkas
+              {metrics.pendingBandingCount} Berkas
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              {pedomanGajiService ? `${totalPedomanCount} Pedoman Gaji Terbit` : "4 Banding Gaji"}
+              {metrics.totalPedomanCount} Pedoman Gaji Terbit
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#F39C12] h-full rounded-full" style={{ width: "70%" }} />
+            <div className="bg-[#F39C12] h-full rounded-full" style={{ width: `${Math.min(metrics.pendingBandingCount * 20, 100)}%` }} />
           </div>
         </div>
 
@@ -217,14 +183,14 @@ export default function HRDDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#0E6100] tracking-tight">
-              97.1%
+              {metrics.kepatuhanOnTime}%
             </div>
             <p className="text-[11px] text-[#0E6100] font-medium mt-0.5 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" /> +1.8% dari bulan lalu
+              <TrendingUp className="w-3 h-3" /> Rekapitulasi staf bulan ini
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#0E6100] h-full rounded-full" style={{ width: "97.1%" }} />
+            <div className="bg-[#0E6100] h-full rounded-full" style={{ width: `${Math.min(metrics.kepatuhanOnTime, 100)}%` }} />
           </div>
         </div>
       </div>
@@ -239,7 +205,7 @@ export default function HRDDashboard() {
                 <Building2 className="w-4 h-4 text-[#4731B6]" />
                 <span>Distribusi Tenaga Medis per Divisi</span>
               </h3>
-              <p className="text-xs text-[#7E7E7E]">Total 248 pegawai terdaftar di Rumah Sakit</p>
+              <p className="text-xs text-[#7E7E7E]">Total {metrics.totalPegawaiAktif} pegawai terdaftar di Rumah Sakit</p>
             </div>
             <Link href="/hrd/kepegawaian" className="text-xs font-semibold text-[#4731B6] hover:underline">
               Kelola
@@ -247,50 +213,36 @@ export default function HRDDashboard() {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Keperawatan (Rawat Inap, OK, IGD)</span>
-                <span className="text-[#4731B6] font-bold">146 Staf (58.9%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#4731B6] h-full rounded-full" style={{ width: "58.9%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Dokter Spesialis & Umum</span>
-                <span className="text-[#3B289E] font-bold">42 Dokter (16.9%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#8D7BE4] h-full rounded-full" style={{ width: "16.9%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Penunjang Medis (Farmasi, Lab, Radiologi)</span>
-                <span className="text-[#0E6100] font-bold">35 Staf (14.1%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#0E6100] h-full rounded-full" style={{ width: "14.1%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Manajemen, Keuangan & Administrasi</span>
-                <span className="text-[#7E7E7E] font-bold">25 Staf (10.1%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div className="bg-[#7E7E7E] h-full rounded-full" style={{ width: "10.1%" }} />
-              </div>
-            </div>
+            {distribusiDivisi.length > 0 ? (
+              distribusiDivisi.map((item, idx) => (
+                <div key={idx}>
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-[#202020] font-semibold">{item.nama}</span>
+                    <span className="text-[#4731B6] font-bold">
+                      {item.count > 0 ? `${item.count} Staf ` : ""}({item.percent}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${item.percent}%`,
+                        backgroundColor: idx === 0 ? "#4731B6" : idx === 1 ? "#8D7BE4" : idx === 2 ? "#0E6100" : "#7E7E7E",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400 py-4 text-center">Belum ada data distribusi divisi pada database.</p>
+            )}
           </div>
 
           <div className="p-3 bg-[#F2F1F9] rounded-xl flex items-center justify-between text-xs">
             <span className="text-[#5F5F5F]">Status Kepegawaian:</span>
-            <span className="font-bold text-[#4731B6]">182 Pegawai Tetap · 66 PKWT / Kontrak</span>
+            <span className="font-bold text-[#4731B6]">
+              {statusKepegawaian.tetap} Pegawai Tetap · {statusKepegawaian.kontrak} PKWT / Kontrak
+            </span>
           </div>
         </div>
 
@@ -302,7 +254,7 @@ export default function HRDDashboard() {
                 <Calendar className="w-4 h-4 text-[#4731B6]" />
                 <span>Statistik Kehadiran Mingguan RS</span>
               </h3>
-              <p className="text-xs text-[#7E7E7E]">Rata-rata kehadiran: <strong>94.2%</strong> per shift</p>
+              <p className="text-xs text-[#7E7E7E]">Rata-rata kehadiran: <strong>{metrics.tingkatKehadiranHariIni}%</strong> per shift</p>
             </div>
             <Link href="/hrd/absensi" className="text-xs font-semibold text-[#4731B6] hover:underline">
               Rekap Lengkap
@@ -311,38 +263,43 @@ export default function HRDDashboard() {
 
           {/* Bar Chart */}
           <div className="pt-3 flex items-end justify-between gap-2 h-40 border-b border-gray-100 pb-2">
-            {weeklyAttendance.map((item, idx) => (
-              <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                <span className="text-[10px] font-bold text-[#4731B6] opacity-0 group-hover:opacity-100 transition-opacity">
-                  {item.percent}%
-                </span>
-                <div
-                  className={`w-full max-w-[36px] rounded-t-xl transition-all duration-300 ${
-                    item.active
-                      ? "bg-[#4731B6] shadow-md shadow-[#4731B6]/30"
-                      : "bg-[#8D7BE4] hover:bg-[#4731B6]"
-                  }`}
-                  style={{ height: `${item.percent - 20}%` }}
-                />
-                <span className={`text-xs font-semibold ${item.active ? "text-[#4731B6] font-bold" : "text-[#7E7E7E]"}`}>
-                  {item.day}
-                </span>
+            {weeklyAttendance.length > 0 ? (
+              weeklyAttendance.map((item, idx) => (
+                <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
+                  <span className="text-[10px] font-bold text-[#4731B6] opacity-0 group-hover:opacity-100 transition-opacity">
+                    {item.percent}%
+                  </span>
+                  <div
+                    className={`w-full max-w-[36px] rounded-t-xl transition-all duration-300 ${item.active
+                        ? "bg-[#4731B6] shadow-md shadow-[#4731B6]/30"
+                        : "bg-[#8D7BE4] hover:bg-[#4731B6]"
+                      }`}
+                    style={{ height: `${Math.max(15, item.percent - 20)}%` }}
+                  />
+                  <span className={`text-xs font-semibold ${item.active ? "text-[#4731B6] font-bold" : "text-[#7E7E7E]"}`}>
+                    {item.day}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="w-full flex items-center justify-center h-full text-xs text-gray-400">
+                Belum ada data kehadiran mingguan pada database.
               </div>
-            ))}
+            )}
           </div>
 
           {/* Shift Monitoring Row */}
           <div className="grid grid-cols-3 gap-2 text-center pt-1">
             <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-              <span className="block text-xs font-bold text-[#4731B6]">112 Staf</span>
+              <span className="block text-xs font-bold text-[#4731B6]">{shiftMonitoring.pagi} Staf</span>
               <span className="text-[10px] text-[#7E7E7E]">Shift Pagi</span>
             </div>
             <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-              <span className="block text-xs font-bold text-[#3B289E]">74 Staf</span>
+              <span className="block text-xs font-bold text-[#3B289E]">{shiftMonitoring.siang} Staf</span>
               <span className="text-[10px] text-[#7E7E7E]">Shift Siang</span>
             </div>
             <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-              <span className="block text-xs font-bold text-[#0E6100]">42 Staf</span>
+              <span className="block text-xs font-bold text-[#0E6100]">{shiftMonitoring.malam} Staf</span>
               <span className="text-[10px] text-[#7E7E7E]">Shift Malam</span>
             </div>
           </div>
@@ -362,7 +319,7 @@ export default function HRDDashboard() {
             <h4 className="font-bold text-xs sm:text-sm text-[#202020] group-hover:text-[#4731B6] transition-colors truncate">
               Kepegawaian
             </h4>
-            <p className="text-[11px] text-[#7E7E7E] truncate">Kelola data 248 pegawai</p>
+            <p className="text-[11px] text-[#7E7E7E] truncate">Kelola data {metrics.totalPegawaiAktif} pegawai</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#4731B6] shrink-0" />
         </Link>
@@ -378,7 +335,7 @@ export default function HRDDashboard() {
             <h4 className="font-bold text-xs sm:text-sm text-[#202020] group-hover:text-[#4731B6] transition-colors truncate">
               Aju Banding
             </h4>
-            <p className="text-[11px] text-[#7E7E7E] truncate">14 berkas menunggu</p>
+            <p className="text-[11px] text-[#7E7E7E] truncate">{metrics.pendingBandingCount} berkas menunggu</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#4731B6] shrink-0" />
         </Link>
@@ -410,7 +367,7 @@ export default function HRDDashboard() {
             <h4 className="font-bold text-xs sm:text-sm text-[#202020] group-hover:text-[#4731B6] transition-colors truncate">
               Pedoman Gaji
             </h4>
-            <p className="text-[11px] text-[#7E7E7E] truncate">Atur skema upah & tunjangan</p>
+            <p className="text-[11px] text-[#7E7E7E] truncate">{metrics.totalPedomanCount} skema upah terbit</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#4731B6] shrink-0" />
         </Link>
@@ -426,20 +383,26 @@ export default function HRDDashboard() {
         </div>
 
         <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-          {recentBandingList.map((item, idx) => (
-            <div
-              key={idx}
-              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
-            >
-              <div className="min-w-0">
-                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                  {item.title}
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+          {recentActivities.length > 0 ? (
+            recentActivities.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                    {item.title}
+                  </h5>
+                  <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+                </div>
+                <StatusBadge status={item.status} />
               </div>
-              <StatusBadge status={item.status} />
+            ))
+          ) : (
+            <div className="p-6 text-center text-xs text-gray-400">
+              Belum ada aktivitas atau log pengajuan pada database.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

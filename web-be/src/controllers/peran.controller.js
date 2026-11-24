@@ -68,20 +68,57 @@ export const tambahPeran = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, data });
 });
 
-/** PATCH /api/hrd/pegawai/:idPegawai/peran — body: { idPeran } (null untuk menghapus). */
+/** PATCH /api/hrd/pegawai/:idPegawai/peran — body: { idPeran, idPeranList } */
 export const ubahPeranPegawai = asyncHandler(async (req, res) => {
   const { idPegawai } = req.params;
-  const { idPeran } = req.body || {};
-  if (idPeran) await pastikanPeranPunyaPedoman(idPeran);
+  const { idPeran, idPeranList } = req.body || {};
+
+  let peransToSet = undefined;
+  if (idPeranList !== undefined) {
+    peransToSet = Array.isArray(idPeranList) ? idPeranList.filter(Boolean) : [];
+  } else if (idPeran !== undefined) {
+    peransToSet = idPeran ? [idPeran] : [];
+  }
+
+  if (peransToSet !== undefined && peransToSet.length > 0) {
+    for (const pid of peransToSet) {
+      await pastikanPeranPunyaPedoman(pid);
+    }
+  }
 
   const pegawai = await prisma.pegawai.findUnique({ where: { idPegawai } });
   if (!pegawai) throw new ApiError(404, 'Pegawai tidak ditemukan');
 
-  const data = await prisma.pegawai.update({
-    where: { idPegawai },
-    data: { idPeran: idPeran || null },
-    select: { idPegawai: true, nama: true, peran_tenaga_medis: true },
+  const data = await prisma.$transaction(async (tx) => {
+    if (peransToSet !== undefined) {
+      await tx.pegawai_peran.deleteMany({ where: { idPegawai } });
+      if (peransToSet.length > 0) {
+        await tx.pegawai_peran.createMany({
+          data: peransToSet.map((pid, idx) => ({
+            idPegawai,
+            idPeran: pid,
+            isPrimary: idx === 0,
+          })),
+        });
+      }
+    }
+
+    return tx.pegawai.update({
+      where: { idPegawai },
+      data: { idPeran: peransToSet !== undefined ? (peransToSet[0] || null) : (idPeran || null) },
+      select: {
+        idPegawai: true,
+        nama: true,
+        peran_tenaga_medis: true,
+        pegawai_peran: {
+          include: {
+            peran_tenaga_medis: true,
+          },
+        },
+      },
+    });
   });
+
   res.json({ success: true, data });
 });
 

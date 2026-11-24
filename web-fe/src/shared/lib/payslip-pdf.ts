@@ -15,12 +15,18 @@ export interface PayslipPdfData {
   rekening: string;
   gajiPokok: number;
   tunjanganPeran: number;
+  tunjanganKehadiran?: number;
   tugasTambahan: number;
   insentifShift: number;
+  insentifJasaMedis?: number;
+  tunjanganTambahan?: number;
   bpjsKesehatan: number;
   bpjsKetenagakerjaan: number;
   pph21: number;
   potonganAbsensi: number;
+  potonganTidakHadir?: number;
+  potonganTerlambat?: number;
+  potonganTambahan?: number;
   totalPendapatan: number;
   totalPotongan: number;
   takeHomePay: number;
@@ -128,45 +134,50 @@ export function createPayslipPdfBinary(data: PayslipPdfData): string {
     add(`305 ${y - 5} m 560 ${y - 5} l S`);
   };
 
+  const insentifDanLainnya = (data.insentifJasaMedis || 0) + (data.tunjanganTambahan || 0);
+  const potonganLainnya = data.potonganTambahan || 0;
+
   drawRow(555, "Gaji Pokok", formatRupiah(data.gajiPokok), "BPJS Kesehatan (4%)", formatRupiah(data.bpjsKesehatan));
-  drawRow(535, "Tunjangan Peran", formatRupiah(data.tunjanganPeran), "BPJS Ketenagakerjaan", formatRupiah(data.bpjsKetenagakerjaan));
-  drawRow(515, "Tugas Tambahan/Lembur", formatRupiah(data.tugasTambahan), "Pajak Penghasilan (PPh21)", formatRupiah(data.pph21));
-  drawRow(495, "Insentif Shift & Pelayanan", formatRupiah(data.insentifShift), "Potongan Keterlambatan", formatRupiah(data.potonganAbsensi));
+  drawRow(537, "Tunjangan Peran / Jabatan", formatRupiah(data.tunjanganPeran), "BPJS Ketenagakerjaan", formatRupiah(data.bpjsKetenagakerjaan));
+  drawRow(519, "Tunjangan Kehadiran", formatRupiah(data.tunjanganKehadiran || 0), "Pajak Penghasilan (PPh21)", formatRupiah(data.pph21));
+  drawRow(501, "Tugas Tambahan / Lembur", formatRupiah(data.tugasTambahan), "Potongan Tidak Hadir", formatRupiah(data.potonganTidakHadir || 0));
+  drawRow(483, "Tunjangan Shift Malam", formatRupiah(data.insentifShift), "Potongan Keterlambatan", formatRupiah(data.potonganTerlambat || data.potonganAbsensi));
+  drawRow(465, "Insentif Medis & Penyesuaian", formatRupiah(insentifDanLainnya), "Potongan Lainnya", formatRupiah(potonganLainnya));
 
   // Subtotal Pendapatan & Potongan
   add("0.9 0.96 0.9 rg");
-  add("35 465 255 22 re f");
+  add("35 435 255 22 re f");
   add("0.05 0.4 0.0 rg");
-  add("BT /F1 9.5 Tf 45 472 Td (Total Pendapatan :) Tj ET");
-  add(`BT /F1 9.5 Tf 200 472 Td (${esc(formatRupiah(data.totalPendapatan))}) Tj ET`);
+  add("BT /F1 9.5 Tf 45 442 Td (Total Pendapatan :) Tj ET");
+  add(`BT /F1 9.5 Tf 200 442 Td (${esc(formatRupiah(data.totalPendapatan))}) Tj ET`);
 
   add("0.98 0.92 0.92 rg");
-  add("305 465 255 22 re f");
+  add("305 435 255 22 re f");
   add("0.6 0.15 0.0 rg");
-  add("BT /F1 9.5 Tf 315 472 Td (Total Potongan :) Tj ET");
-  add(`BT /F1 9.5 Tf 470 472 Td (- ${esc(formatRupiah(data.totalPotongan))}) Tj ET`);
+  add("BT /F1 9.5 Tf 315 442 Td (Total Potongan :) Tj ET");
+  add(`BT /F1 9.5 Tf 470 442 Td (- ${esc(formatRupiah(data.totalPotongan))}) Tj ET`);
 
   // Grand Total Take Home Pay Card (Warna Khas Ungu Medika)
   add("0.278 0.192 0.714 rg");
-  add("35 395 525 50 re f");
+  add("35 375 525 48 re f");
 
   add("1 1 1 rg");
-  add("BT /F2 10.5 Tf 50 426 Td (TOTAL GAJI BERSIH (TAKE HOME PAY) :) Tj ET");
-  add(`BT /F1 16 Tf 50 405 Td (${esc(formatRupiah(data.takeHomePay))}) Tj ET`);
-  add("BT /F2 9 Tf 360 415 Td (Status: LUNAS DITRANSFER) Tj ET");
+  add("BT /F2 10.5 Tf 50 405 Td (TOTAL GAJI BERSIH (TAKE HOME PAY) :) Tj ET");
+  add(`BT /F1 16 Tf 50 384 Td (${esc(formatRupiah(data.takeHomePay))}) Tj ET`);
+  add("BT /F2 9 Tf 360 395 Td (Status: LUNAS DITRANSFER) Tj ET");
 
   // Catatan & Tanda Tangan
   add("0.4 0.4 0.4 rg");
-  add("BT /F2 8.5 Tf 50 350 Td (Catatan: Slip gaji ini diterbitkan secara elektronik dan sah tanpa tanda tangan basah.) Tj ET");
-  add(`BT /F2 8.5 Tf 50 336 Td (Dicetak melalui Sistem RSI Medika pada ${new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}) Tj ET`);
+  add("BT /F2 8.5 Tf 50 335 Td (Catatan: Slip gaji ini diterbitkan secara elektronik dan sah tanpa tanda tangan basah.) Tj ET");
+  add(`BT /F2 8.5 Tf 50 321 Td (Dicetak melalui Sistem RSI Medika pada ${new Date().toLocaleDateString("id-ID", { dateStyle: "long" })}) Tj ET`);
 
   // Tanda Tangan
   add("0.2 0.2 0.2 rg");
-  add("BT /F2 9 Tf 70 280 Td (Pegawai Penerima,) Tj ET");
-  add(`BT /F1 9 Tf 70 220 Td (${esc(data.pegawai)}) Tj ET`);
+  add("BT /F2 9 Tf 70 270 Td (Pegawai Penerima,) Tj ET");
+  add(`BT /F1 9 Tf 70 210 Td (${esc(data.pegawai)}) Tj ET`);
 
-  add("BT /F2 9 Tf 380 280 Td (Manajer Keuangan & Payroll,) Tj ET");
-  add("BT /F1 9 Tf 380 220 Td (Bambang Sudiro, S.E., Ak.) Tj ET");
+  add("BT /F2 9 Tf 380 270 Td (Manajer Keuangan & Payroll,) Tj ET");
+  add("BT /F1 9 Tf 380 210 Td (Bambang Sudiro, S.E., Ak.) Tj ET");
 
   const content = stream.join("\n");
   const objects: string[] = [];
@@ -362,9 +373,12 @@ export function printPayslipDocument(data: PayslipPdfData) {
             <div class="table-head-g">PENDAPATAN (+)</div>
             <div class="table-body">
               <div class="row"><span>Gaji Pokok</span><span>${formatRupiah(data.gajiPokok)}</span></div>
-              <div class="row"><span>Tunjangan Peran</span><span>${formatRupiah(data.tunjanganPeran)}</span></div>
-              <div class="row"><span>Tugas Tambahan/Lembur</span><span>${formatRupiah(data.tugasTambahan)}</span></div>
-              <div class="row"><span>Insentif Shift</span><span>${formatRupiah(data.insentifShift)}</span></div>
+              <div class="row"><span>Tunjangan Peran / Jabatan</span><span>${formatRupiah(data.tunjanganPeran)}</span></div>
+              <div class="row"><span>Tunjangan Kehadiran</span><span>${formatRupiah(data.tunjanganKehadiran || 0)}</span></div>
+              <div class="row"><span>Uang Lembur</span><span>${formatRupiah(data.tugasTambahan)}</span></div>
+              <div class="row"><span>Tunjangan Shift Malam</span><span>${formatRupiah(data.insentifShift)}</span></div>
+              ${(data.insentifJasaMedis || 0) > 0 ? `<div class="row"><span>Insentif Jasa Medis</span><span>${formatRupiah(data.insentifJasaMedis || 0)}</span></div>` : ""}
+              ${(data.tunjanganTambahan || 0) !== 0 ? `<div class="row"><span>Penyesuaian / Tambahan</span><span>${(data.tunjanganTambahan || 0) < 0 ? "- " + formatRupiah(Math.abs(data.tunjanganTambahan || 0)) : formatRupiah(data.tunjanganTambahan || 0)}</span></div>` : ""}
             </div>
             <div class="subtotal-g">
               <span>Total Pendapatan</span><span>${formatRupiah(data.totalPendapatan)}</span>
@@ -377,7 +391,11 @@ export function printPayslipDocument(data: PayslipPdfData) {
               <div class="row"><span>BPJS Kesehatan (4%)</span><span>${formatRupiah(data.bpjsKesehatan)}</span></div>
               <div class="row"><span>BPJS Ketenagakerjaan</span><span>${formatRupiah(data.bpjsKetenagakerjaan)}</span></div>
               <div class="row"><span>Pajak PPh 21</span><span>${formatRupiah(data.pph21)}</span></div>
-              <div class="row"><span>Potongan Absensi</span><span>${formatRupiah(data.potonganAbsensi)}</span></div>
+              ${(data.potonganTidakHadir || 0) > 0 ? `<div class="row"><span>Potongan Tidak Hadir</span><span>- ${formatRupiah(data.potonganTidakHadir || 0)}</span></div>` : ""}
+              ${(data.potonganTerlambat || 0) > 0 ? `<div class="row"><span>Potongan Keterlambatan</span><span>- ${formatRupiah(data.potonganTerlambat || 0)}</span></div>` : ""}
+              ${(data.potonganTambahan || 0) !== 0 ? `<div class="row"><span>Koreksi / Penalti</span><span>${(data.potonganTambahan || 0) > 0 ? "- " + formatRupiah(data.potonganTambahan || 0) : "+ " + formatRupiah(Math.abs(data.potonganTambahan || 0))}</span></div>` : ""}
+              ${(data.potonganAbsensi || 0) > 0 && !(data.potonganTidakHadir || 0) && !(data.potonganTerlambat || 0) && !(data.potonganTambahan || 0) ? `<div class="row"><span>Potongan Absensi</span><span>- ${formatRupiah(data.potonganAbsensi)}</span></div>` : ""}
+              ${(data.potonganAbsensi || 0) === 0 ? `<div class="row"><span>Potongan Absensi</span><span>Rp 0</span></div>` : ""}
             </div>
             <div class="subtotal-r">
               <span>Total Potongan</span><span>- ${formatRupiah(data.totalPotongan)}</span>

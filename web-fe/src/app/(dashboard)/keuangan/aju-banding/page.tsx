@@ -19,68 +19,15 @@ export default function KeuanganAjuBandingPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(5);
 
-  const [bandingList, setBandingList] = useState<BandingValidationItem[]>([
-    {
-      id: "BDG-25021",
-      pegawai: "Ns. Ayu Lestari, S.Kep.",
-      nip: "198904122014022001",
-      jabatan: "Perawat Pelaksana",
-      unit: "Unit Rawat Inap",
-      periode: "Mei 2025",
-      komponen: "Tunjangan insentif shift malam",
-      alasanLengkap:
-        "Tugas jaga malam tanggal 12 dan 14 Mei 2025 di Bangsal 3A belum masuk hitungan tunjangan shift malam (2x shift = Rp 350.000).",
-      nominal: "Rp 350.000",
-      status: "Menunggu",
-      buktiPendukung: "log_jaga_malam_mei_ayu.pdf",
-    },
-    {
-      id: "BDG-25018",
-      pegawai: "Ns. Rani Oktavia, S.Kep.",
-      nip: "199205142018022004",
-      jabatan: "Perawat Pelaksana",
-      unit: "ICU",
-      periode: "Mei 2025",
-      komponen: "Potongan absensi keterlambatan",
-      alasanLengkap:
-        "Terdapat pemotongan Rp 120.000 atas keterlambatan 05 Mei, padahal sudah ada form tugas luar dinas dari Karu ICU.",
-      nominal: "Rp 120.000",
-      status: "Diproses",
-      buktiPendukung: "surat_tugas_luar_rani.pdf",
-    },
-    {
-      id: "BDG-25014",
-      pegawai: "Dedi Kurnia, A.Md.Kep.",
-      nip: "198706232012011003",
-      jabatan: "Perawat",
-      unit: "Rawat Jalan",
-      periode: "April 2025",
-      komponen: "Tunjangan tugas tambahan klinik",
-      alasanLengkap: "Tugas asistensi tindakan hemodialisa 5 sesi belum tercatat di payroll April.",
-      nominal: "Rp 275.000",
-      status: "Disetujui",
-      keputusan: "Telah diverifikasi sesuai logbook tindakan.",
-    },
-    {
-      id: "BDG-25009",
-      pegawai: "dr. Bima Pratama",
-      nip: "198811032013011002",
-      jabatan: "Dokter Umum",
-      unit: "IGD",
-      periode: "April 2025",
-      komponen: "Uang lembur on-call IGD",
-      alasanLengkap: "On-call darurat 3 Mei selama 6 jam penanganan laka massal.",
-      nominal: "Rp 450.000",
-      status: "Disetujui",
-      keputusan: "Disetujui dan dibayarkan pada payroll berikutnya.",
-    },
-  ]);
+  const [bandingList, setBandingList] = useState<BandingValidationItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     async function loadBanding() {
+      setIsLoading(true);
       try {
         const data = await bandingGajiService.daftarBanding();
-        if (data && data.length > 0) {
+        if (data) {
           const mapped: BandingValidationItem[] = data.map((b: BandingGajiItem) => ({
             id: b.idPengajuan,
             pegawai: b.pegawai?.nama || "Pegawai Medika",
@@ -90,15 +37,17 @@ export default function KeuanganAjuBandingPage() {
             periode: b.periodeGaji,
             komponen: b.alasanBanding.slice(0, 35),
             alasanLengkap: b.alasanBanding,
-            nominal: "Rp 350.000",
+            nominal: b.penggajian?.tunjangan ? `Rp ${Number(b.penggajian.tunjangan).toLocaleString("id-ID")}` : "Penyesuaian",
             status: b.status,
             buktiPendukung: b.buktiPendukung,
             keputusan: b.keputusan,
           }));
           setBandingList(mapped);
         }
-      } catch {
-        // Fallback default
+      } catch (err) {
+        console.error("Gagal memuat daftar aju banding:", err);
+      } finally {
+        setIsLoading(false);
       }
     }
     loadBanding();

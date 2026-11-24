@@ -111,10 +111,16 @@ export const hitungGajiBulk = asyncHandler(async (req, res) => {
   const pegawaiList = await prisma.pegawai.findMany({
     where: {
       statusPegawai: 'Aktif',
-      idPeran: { not: null },
+      OR: [
+        { idPeran: { not: null } },
+        { pegawai_peran: { some: {} } },
+      ],
       ...(Array.isArray(body.idPegawai) && body.idPegawai.length > 0 && { idPegawai: { in: body.idPegawai } }),
     },
-    include: { peran_tenaga_medis: true },
+    include: {
+      peran_tenaga_medis: true,
+      pegawai_peran: { include: { peran_tenaga_medis: true } },
+    },
     orderBy: { nama: 'asc' },
   });
 

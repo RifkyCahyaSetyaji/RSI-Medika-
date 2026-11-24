@@ -10,3 +10,4 @@ export * from "./pedoman-gaji.service";
 export * from "./penggajian.service";
 export * from "./banding-gaji.service";
 export * from "./hrd.service";
+export * from "./dashboard.service";

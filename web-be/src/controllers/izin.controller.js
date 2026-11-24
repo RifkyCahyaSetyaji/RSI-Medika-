@@ -11,7 +11,15 @@ import {
 } from '../services/cuti.service.js';
 
 const includeDetail = {
-  pegawai: { select: { idPegawai: true, nama: true, unitKerja: true } },
+  pegawai: {
+    select: {
+      idPegawai: true,
+      nama: true,
+      nip: true,
+      jabatan: true,
+      unitKerja: true,
+    },
+  },
 };
 
 const serialize = (p) => ({
@@ -30,7 +38,17 @@ export const jenisIzin = (req, res) => res.json({ success: true, data: JENIS_IZI
  * Tidak memotong jatah cuti.
  */
 export const ajukanIzin = asyncHandler(async (req, res) => {
-  const { jenis, tanggalMulai, tanggalSelesai, alasan, berkasPendukung } = req.body || {};
+  let { jenis, tanggalMulai, tanggalSelesai, alasan, berkasPendukung } = req.body || {};
+
+  // Normalisasi jenis (misal 'Izin Sakit' -> 'Sakit', 'Izin Keperluan Pribadi' -> 'Izin')
+  if (typeof jenis === 'string') {
+    if (/sakit/i.test(jenis)) {
+      jenis = 'Sakit';
+    } else if (/izin/i.test(jenis)) {
+      jenis = 'Izin';
+    }
+  }
+
   const aturan = JENIS_IZIN[jenis];
   if (!aturan) throw new ApiError(400, `jenis harus salah satu dari: ${Object.keys(JENIS_IZIN).join(', ')}`);
   if (!alasan?.trim()) throw new ApiError(400, 'alasan wajib diisi');
@@ -96,7 +114,7 @@ async function ambilMenunggu(user, idPengajuan) {
   const scope = await scopePegawai(user);
   const p = await prisma.pengajuan_ketidakhadiran.findFirst({ where: { idPengajuan, pegawai: scope } });
   if (!p) throw new ApiError(404, 'Pengajuan tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
   return p;
 }
 
@@ -135,7 +153,7 @@ export const batalkanIzin = asyncHandler(async (req, res) => {
     where: { idPengajuan: req.params.idPengajuan, idPegawai: req.user.idPegawai },
   });
   if (!p) throw new ApiError(404, 'Pengajuan tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
 
   const data = await prisma.pengajuan_ketidakhadiran.update({
     where: { idPengajuan: p.idPengajuan },

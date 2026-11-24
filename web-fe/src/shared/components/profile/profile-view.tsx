@@ -26,9 +26,9 @@ export function ProfileView() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Bank state
-  const [bankName, setBankName] = useState<string>("Bank Mandiri");
-  const [accountNumber, setAccountNumber] = useState<string>("1400018482103");
-  const [accountHolder, setAccountHolder] = useState<string>(user?.nama || "Ayu Lestari");
+  const [bankName, setBankName] = useState<string>("");
+  const [accountNumber, setAccountNumber] = useState<string>("");
+  const [accountHolder, setAccountHolder] = useState<string>("");
 
   // Password state
   const [oldPassword, setOldPassword] = useState<string>("");
@@ -45,7 +45,7 @@ export function ProfileView() {
           setAccountHolder(reks[0].atasNama);
         }
       } catch {
-        // Fallback default
+        // No bank account found
       }
     }
     loadRekening();
@@ -115,7 +115,7 @@ export function ProfileView() {
       <div className="flex flex-col items-center text-center space-y-3 pt-4">
         <div className="relative group cursor-pointer">
           <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#E6DEFC] border-4 border-white shadow-md flex items-center justify-center text-3xl font-extrabold text-[#4731B6]">
-            {user?.initials || "AL"}
+            {user?.initials || "RM"}
           </div>
           <div className="absolute bottom-0 right-0 p-2 rounded-full bg-[#4731B6] text-white shadow-md hover:scale-110 transition-transform">
             <Camera className="w-4 h-4" />
@@ -157,7 +157,7 @@ export function ProfileView() {
             </div>
             <div className="flex justify-between py-2 text-[#3F3F3F]">
               <span className="text-[#7E7E7E]">Status kepegawaian</span>
-              <span className="font-medium text-[#0E6100] text-right">Pegawai Tetap</span>
+              <span className="font-medium text-[#0E6100] text-right">{user?.statusPegawai || "Pegawai Tetap"}</span>
             </div>
             <div className="flex justify-between py-2 text-[#3F3F3F]">
               <span className="text-[#7E7E7E]">Email RSI</span>
@@ -167,7 +167,7 @@ export function ProfileView() {
             </div>
             <div className="flex justify-between py-2 text-[#3F3F3F]">
               <span className="text-[#7E7E7E]">Tanggal bergabung</span>
-              <span className="font-medium text-[#202020] text-right">01 Feb 2021</span>
+              <span className="font-medium text-[#202020] text-right">{user?.tanggalMasuk || "-"}</span>
             </div>
           </div>
         </div>
@@ -240,24 +240,31 @@ export function ProfileView() {
               </button>
             </div>
 
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#4731B6] to-[#30217D] text-white space-y-3 shadow-xs">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold tracking-wide text-white/80">
-                  Rekening Utama (Payroll)
-                </span>
-                <CreditCard className="w-5 h-5 text-white/80" />
+            {accountNumber ? (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#4731B6] to-[#30217D] text-white space-y-3 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold tracking-wide text-white/80">
+                    Rekening Utama (Payroll)
+                  </span>
+                  <CreditCard className="w-5 h-5 text-white/80" />
+                </div>
+                <div className="pt-2">
+                  <p className="text-[11px] text-white/70">Nomor Rekening</p>
+                  <p className="text-base sm:text-lg font-mono font-bold tracking-wider">
+                    {accountNumber}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
+                  <span>{accountHolder || "-"}</span>
+                  <span className="font-bold">{bankName || "-"}</span>
+                </div>
               </div>
-              <div className="pt-2">
-                <p className="text-[11px] text-white/70">Nomor Rekening</p>
-                <p className="text-base sm:text-lg font-mono font-bold tracking-wider">
-                  {accountNumber}
-                </p>
+            ) : (
+              <div className="p-6 rounded-2xl bg-gray-50 border border-gray-200 text-center space-y-2">
+                <CreditCard className="w-6 h-6 text-gray-400 mx-auto" />
+                <p className="text-xs font-medium text-[#7E7E7E]">Belum ada rekening payroll terdaftar di database.</p>
               </div>
-              <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
-                <span>{accountHolder}</span>
-                <span className="font-bold">{bankName}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

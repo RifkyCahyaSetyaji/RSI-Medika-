@@ -20,10 +20,10 @@ router.post('/', ajukanKoreksi);
 router.get('/saya', koreksiSaya);
 router.patch('/:idKoreksi/batal', batalkanKoreksi);
 
-// Sekretaris Unit memproses; HRD hanya bisa melihat
+// Sekretaris Unit & HRD memproses pengajuan koreksi absensi
 router.get('/', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), daftarKoreksi);
-router.patch('/:idKoreksi/setujui', authorize(ROLES.SEKRETARIS_UNIT), setujuiKoreksi);
-router.patch('/:idKoreksi/tolak', authorize(ROLES.SEKRETARIS_UNIT), tolakKoreksi);
+router.patch('/:idKoreksi/setujui', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), setujuiKoreksi);
+router.patch('/:idKoreksi/tolak', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), tolakKoreksi);
 
 export default router;
 

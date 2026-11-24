@@ -51,7 +51,7 @@ export function FormPerubahanJamPraktikModal({
   const [jamMulaiBaru, setJamMulaiBaru] = useState<string>("09:00");
   const [jamSelesaiBaru, setJamSelesaiBaru] = useState<string>("13:00");
   const [ruangPoliklinik, setRuangPoliklinik] = useState<string>(
-    initialData?.ruangan || "Poli Spesialis Penyakit Dalam"
+    initialData?.ruangan || ""
   );
   const [kategoriAlasan, setKategoriAlasan] = useState<string>(
     "Tindakan Medis / Operasi Cito"
@@ -71,13 +71,17 @@ export function FormPerubahanJamPraktikModal({
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const idJadwal = initialData?.idJadwal || "JDW0000001";
+    const idJadwal = initialData?.idJadwal;
+    if (!idJadwal) {
+      setErrorMessage("Data jadwal yang akan diubah tidak valid atau belum dipilih.");
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       if (activeTab === "praktik") {
-        const fullAlasan = `[Perubahan Jam Praktik - ${kategoriAlasan}] Jam: ${jamMulaiBaru}-${jamSelesaiBaru} WIB di ${ruangPoliklinik}. ${
-          dokterPengganti ? `Dokter Pendamping/Backup: ${dokterPengganti}. ` : ""
-        }${alasanDetail ? `Alasan: ${alasanDetail}` : ""}`;
+        const fullAlasan = `[Perubahan Jam Praktik - ${kategoriAlasan}] Jam: ${jamMulaiBaru}-${jamSelesaiBaru} WIB di ${ruangPoliklinik || "-"}. ${dokterPengganti ? `Dokter Pendamping/Backup: ${dokterPengganti}. ` : ""
+          }${alasanDetail ? `Alasan: ${alasanDetail}` : ""}`;
 
         await pengajuanJadwalService.ajukan({
           idJadwal,
@@ -92,9 +96,8 @@ export function FormPerubahanJamPraktikModal({
           `Permohonan perubahan jam praktik dokter pada tanggal ${tanggalBaru} (${jamMulaiBaru}–${jamSelesaiBaru} WIB) berhasil dikirimkan ke Sekretaris Unit!`
         );
       } else {
-        const fullAlasan = `[Tukar Shift Jaga] Pindah ke Shift ${shiftBaru} tanggal ${tanggalBaru}.${
-          rekanTukar ? ` Tukar dengan: ${rekanTukar}.` : ""
-        } Alasan: ${alasanDetail || "Keperluan dinas / pribadi"}`;
+        const fullAlasan = `[Tukar Shift Jaga] Pindah ke Shift ${shiftBaru} tanggal ${tanggalBaru}.${rekanTukar ? ` Tukar dengan: ${rekanTukar}.` : ""
+          } Alasan: ${alasanDetail || "Keperluan dinas / pribadi"}`;
 
         await pengajuanJadwalService.ajukan({
           idJadwal,
@@ -110,13 +113,12 @@ export function FormPerubahanJamPraktikModal({
       }
       onClose();
     } catch (err: any) {
-      // Local fallback success so UI user experience stays smooth
-      onSuccess(
-        `Permohonan ${
-          activeTab === "praktik" ? "perubahan jam praktik dokter" : "tukar shift"
-        } tanggal ${tanggalBaru} telah tersimpan dan diteruskan ke Sekretaris Unit!`
+      console.error("Gagal mengirim pengajuan jadwal:", err);
+      setErrorMessage(
+        err.response?.data?.message ||
+        err.message ||
+        "Terjadi kesalahan saat mengirim pengajuan jadwal. Silakan coba lagi."
       );
-      onClose();
     } finally {
       setIsSubmitting(false);
     }
@@ -161,11 +163,10 @@ export function FormPerubahanJamPraktikModal({
           <button
             type="button"
             onClick={() => setActiveTab("praktik")}
-            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeTab === "praktik"
+            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${activeTab === "praktik"
                 ? "bg-white text-[#4731B6] shadow-xs"
                 : "text-[#5F5F5F] hover:text-[#202020]"
-            }`}
+              }`}
           >
             <Clock className="w-4 h-4" />
             <span>Perubahan Jam Praktik Dokter</span>
@@ -173,11 +174,10 @@ export function FormPerubahanJamPraktikModal({
           <button
             type="button"
             onClick={() => setActiveTab("shift")}
-            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-              activeTab === "shift"
+            className={`flex-1 py-2 sm:py-2.5 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${activeTab === "shift"
                 ? "bg-white text-[#4731B6] shadow-xs"
                 : "text-[#5F5F5F] hover:text-[#202020]"
-            }`}
+              }`}
           >
             <Calendar className="w-4 h-4" />
             <span>Tukar Shift Jaga Staf</span>
@@ -192,7 +192,7 @@ export function FormPerubahanJamPraktikModal({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 font-semibold text-[#202020]">
               <Calendar className="w-4 h-4 text-[#4731B6]" />
-              <span>{initialData?.tanggalStr || "Senin, 12 Mei 2025"}</span>
+              <span>{initialData?.tanggalStr || "Senin, 12 November 2026"}</span>
             </div>
             <div className="flex items-center gap-2 font-medium text-[#4731B6] bg-white px-3 py-1 rounded-lg border border-gray-200">
               <Clock className="w-3.5 h-3.5" />

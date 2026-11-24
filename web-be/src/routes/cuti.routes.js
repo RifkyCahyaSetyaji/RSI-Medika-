@@ -25,10 +25,10 @@ router.post('/', ajukanCuti);
 router.get('/saya', cutiSaya);
 router.patch('/:idPengajuan/batal', batalkanCuti);
 
-// Sekretaris Unit memproses; HRD hanya bisa melihat
+// Sekretaris Unit & HRD memproses pengajuan cuti
 router.get('/', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), daftarCuti);
 router.get('/:idPengajuan', detailCuti);
-router.patch('/:idPengajuan/setujui', authorize(ROLES.SEKRETARIS_UNIT), setujuiCuti);
-router.patch('/:idPengajuan/tolak', authorize(ROLES.SEKRETARIS_UNIT), tolakCuti);
+router.patch('/:idPengajuan/setujui', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), setujuiCuti);
+router.patch('/:idPengajuan/tolak', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), tolakCuti);
 
 export default router;

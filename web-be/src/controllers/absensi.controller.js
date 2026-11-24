@@ -22,19 +22,43 @@ function ringkasJadwal(j) {
     jenisJadwal: j.jenisJadwal,
     mulai: fmt(b.mulai),
     selesai: fmt(b.selesai),
+    jamMulai: fmt(b.mulai),
+    jamSelesai: fmt(b.selesai),
     bukaAbsenMasuk: fmt(b.bukaMasuk),
   };
 }
 
-/** Rentang riwayat: default 30 hari terakhir s/d hari ini, maks 93 hari. */
-function rentangRiwayat(dari, sampai) {
-  const s = sampai ? parseTanggal(sampai) : hariIni();
-  const d = dari ? parseTanggal(dari) : tambahHari(s ?? hariIni(), -30);
-  if (!d || !s) throw new ApiError(400, 'Parameter tanggal harus berformat YYYY-MM-DD');
-  if (s < d) throw new ApiError(400, 'Tanggal akhir tidak boleh sebelum tanggal awal');
-  if ((s - d) / 86400000 > 93) throw new ApiError(400, 'Rentang maksimal 93 hari');
-  // jadwal di masa depan tidak masuk riwayat
-  return { gte: d, lte: s > hariIni() ? hariIni() : s };
+/** Rentang riwayat / rekap absensi. */
+function rentangRiwayat(query = {}) {
+  const now = sekarang();
+  let d, s;
+
+  if (query.periode && /^\d{4}-(0[1-9]|1[0-2])$/.test(query.periode)) {
+    const [y, m] = query.periode.split('-').map(Number);
+    d = new Date(Date.UTC(y, m - 1, 1));
+    s = new Date(Date.UTC(y, m, 0));
+  } else if (query.bulan && query.tahun) {
+    const y = Number(query.tahun);
+    const m = Number(query.bulan);
+    d = new Date(Date.UTC(y, m - 1, 1));
+    s = new Date(Date.UTC(y, m, 0));
+  } else {
+    const dari = query.dari || query.tanggalMulai;
+    const sampai = query.sampai || query.tanggalSelesai;
+    if (dari || sampai) {
+      s = sampai ? parseTanggal(sampai) : hariIni();
+      d = dari ? parseTanggal(dari) : tambahHari(s ?? hariIni(), -30);
+      if (!d || !s) throw new ApiError(400, 'Parameter tanggal harus berformat YYYY-MM-DD');
+      if (s < d) throw new ApiError(400, 'Tanggal akhir tidak boleh sebelum tanggal awal');
+      if ((s - d) / 86400000 > 93) throw new ApiError(400, 'Rentang maksimal 93 hari');
+    } else {
+      // Default: bulan berjalan penuh (1 s/d akhir bulan)
+      d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+      s = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0));
+    }
+  }
+
+  return { gte: d, lte: s };
 }
 
 /**
@@ -134,18 +158,20 @@ export const absenPulang = asyncHandler(async (req, res) => {
 });
 
 async function riwayat(wherePegawai, query) {
-  const tanggal = rentangRiwayat(query.dari, query.sampai);
+  const tanggal = rentangRiwayat(query);
   const jadwal = await prisma.jadwal.findMany({
     where: { ...wherePegawai, tanggal },
     include: {
       absensi: true,
-      pegawai: { select: { idPegawai: true, nama: true, unitKerja: true } },
+      pegawai: { select: { idPegawai: true, nama: true, nip: true, jabatan: true, unitKerja: true } },
     },
     orderBy: [{ tanggal: 'desc' }, { jamMulai: 'desc' }],
   });
   const now = sekarang();
   let rows = jadwal
-    .filter((j) => batasJadwal(j).bukaMasuk <= now) // yang belum mulai tidak ditampilkan
+    // Jadwal yang sudah memiliki data absensi di DB selalu ditampilkan;
+    // jadwal tanpa absensi hanya ditampilkan jika waktu buka absennya sudah lewat
+    .filter((j) => (j.absensi && j.absensi.length > 0) || batasJadwal(j).bukaMasuk <= now)
     .map((j) => ({ ...barisRiwayat(j, j.absensi[0], now), pegawai: j.pegawai }));
   if (query.status) rows = rows.filter((r) => r.status === query.status || r.statusKehadiran === query.status);
   return rows;
@@ -167,7 +193,7 @@ export const detailRiwayat = asyncHandler(async (req, res) => {
     where,
     include: {
       absensi: { include: { pengajuan_koreksi: { orderBy: { idKoreksi: 'desc' } } } },
-      pegawai: { select: { idPegawai: true, nama: true, unitKerja: true } },
+      pegawai: { select: { idPegawai: true, nama: true, nip: true, jabatan: true, unitKerja: true } },
     },
   });
   if (!jadwal) throw new ApiError(404, 'Data absensi tidak ditemukan');

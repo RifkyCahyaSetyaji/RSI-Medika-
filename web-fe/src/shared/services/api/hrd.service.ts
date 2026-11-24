@@ -25,6 +25,7 @@ export const hrdService = {
     tanggalMasuk?: string;
     sisaJatahCuti?: number;
     idPeran?: string | null;
+    idPeranList?: string[];
   }) => {
     const res = await apiClient.post<Pegawai>("/hrd/pegawai", data);
     return res.data;
@@ -44,6 +45,7 @@ export const hrdService = {
       tanggalMasuk?: string;
       sisaJatahCuti?: number;
       idPeran?: string | null;
+      idPeranList?: string[];
     }
   ) => {
     const res = await apiClient.patch<Pegawai>(`/hrd/pegawai/${idPegawai}`, data);

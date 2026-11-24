@@ -21,14 +21,20 @@ const includePeran = { peran_tenaga_medis: { select: { idPeran: true, namaPeran:
 
 
 export async function scopePegawai(user) {
-  if (user.role === ROLES.HRD) return {};
+  if (user.role === ROLES.HRD || user.role === ROLES.SUPER_ADMIN) return {};
   if (user.role === ROLES.SEKRETARIS_UNIT) {
     const saya = await prisma.pegawai.findUnique({
       where: { idPegawai: user.idPegawai },
       select: { unitKerja: true },
     });
     if (!saya) throw new ApiError(404, 'Data pegawai Anda tidak ditemukan');
-    return { unitKerja: saya.unitKerja };
+    const unitClean = saya.unitKerja.replace(/^Unit\s+/i, '').trim();
+    return {
+      OR: [
+        { unitKerja: saya.unitKerja },
+        { unitKerja: { contains: unitClean, mode: 'insensitive' } },
+      ],
+    };
   }
   throw new ApiError(403, 'Anda tidak memiliki akses mengelola jadwal');
 }
@@ -45,7 +51,7 @@ export async function ambilPegawaiTerkelola(user, idPegawai) {
 }
 
 
-export function tentukanSlot(pegawai, { shift, jamMulai, jamSelesai, lembur }) {
+export function tentukanSlot(pegawai, { shift, jenisJadwal, jamMulai, jamSelesai, lembur }) {
   if (isSpesialis(pegawai)) {
     const mulai = parseJam(jamMulai ?? JADWAL_SPESIALIS_DEFAULT.jamMulai);
     const selesai = parseJam(jamSelesai ?? JADWAL_SPESIALIS_DEFAULT.jamSelesai);
@@ -54,7 +60,9 @@ export function tentukanSlot(pegawai, { shift, jamMulai, jamSelesai, lembur }) {
     return { jenisJadwal: JENIS_PRAKTIK, jamMulai: mulai, jamSelesai: selesai };
   }
 
-  const def = SHIFT[shift];
+  const shiftCandidate = shift || jenisJadwal || '';
+  const normalizedShift = shiftCandidate.replace(/^Shift\s+/i, '').trim();
+  const def = SHIFT[normalizedShift] || SHIFT[shiftCandidate];
   if (!def) {
     throw new ApiError(400, `Pegawai ${pegawai.nama} memakai sistem shift. Pilih shift: ${Object.keys(SHIFT).join(', ')}`);
   }
@@ -134,14 +142,19 @@ export async function validasiJadwal(pegawai, slot, { kecualiIdJadwal } = {}) {
   }
 }
 
-/** Jadwal hanya boleh diubah/dihapus jika belum lewat dan belum ada absensi. */
+/** Jadwal hanya boleh diubah/dihapus jika belum lewat dan belum ada absensi masuk (waktuMasuk). */
 export async function pastikanJadwalBisaDiubah(jadwal) {
   if (jadwal.tanggal < hariIni()) {
     throw new ApiError(400, 'Jadwal yang sudah lewat tidak bisa diubah atau dihapus');
   }
-  const absen = await prisma.absensi.count({ where: { idJadwal: jadwal.idJadwal } });
-  if (absen > 0) {
-    throw new ApiError(400, 'Jadwal sudah memiliki data absensi, tidak bisa diubah atau dihapus');
+  const absenMasuk = await prisma.absensi.findFirst({
+    where: {
+      idJadwal: jadwal.idJadwal,
+      waktuMasuk: { not: null },
+    },
+  });
+  if (absenMasuk) {
+    throw new ApiError(400, 'Jadwal sudah memiliki data absensi masuk, tidak bisa diubah atau dihapus');
   }
 }
 

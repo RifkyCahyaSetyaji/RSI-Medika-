@@ -11,20 +11,39 @@ export const jadwalService = {
   jadwalSaya: async (params?: {
     tanggalMulai?: string;
     tanggalSelesai?: string;
+    dari?: string;
+    sampai?: string;
     bulan?: number | string;
     tahun?: number | string;
   }) => {
-    const res = await apiClient.get<JadwalItem[]>("/jadwal/saya", { params });
+    const query = params
+      ? {
+          ...params,
+          dari: params.dari || params.tanggalMulai,
+          sampai: params.sampai || params.tanggalSelesai,
+        }
+      : undefined;
+    const res = await apiClient.get<JadwalItem[]>("/jadwal/saya", { params: query });
     return res.data;
   },
 
   daftarJadwal: async (params?: {
     tanggalMulai?: string;
     tanggalSelesai?: string;
+    dari?: string;
+    sampai?: string;
     idPegawai?: string;
     unitKerja?: string;
+    jenisJadwal?: string;
   }) => {
-    const res = await apiClient.get<JadwalItem[]>("/jadwal", { params });
+    const query = params
+      ? {
+          ...params,
+          dari: params.dari || params.tanggalMulai,
+          sampai: params.sampai || params.tanggalSelesai,
+        }
+      : undefined;
+    const res = await apiClient.get<JadwalItem[]>("/jadwal", { params: query });
     return res.data;
   },
 

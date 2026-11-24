@@ -30,7 +30,14 @@ const JENIS_PENGAJUAN = 'Perubahan Jadwal';
 const includeDetail = {
   jadwal: true,
   pegawai: {
-    select: { nama: true, unitKerja: true, peran_tenaga_medis: { select: { namaPeran: true } } },
+    select: {
+      idPegawai: true,
+      nama: true,
+      nip: true,
+      jabatan: true,
+      unitKerja: true,
+      peran_tenaga_medis: { select: { namaPeran: true } },
+    },
   },
 };
 
@@ -160,7 +167,7 @@ async function ambilPengajuanMenunggu(user, idPengajuan) {
     include: { jadwal: true, pegawai: { include: { peran_tenaga_medis: true } } },
   });
   if (!p) throw new ApiError(404, 'Pengajuan tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
   return p;
 }
 
@@ -176,14 +183,25 @@ export const setujui = asyncHandler(async (req, res) => {
   }
   await validasiJadwal(p.pegawai, slot, { kecualiIdJadwal: p.idJadwal });
 
-  const [data] = await prisma.$transaction([
+  const operations = [];
+  if (slot.tanggal.getTime() !== p.jadwal.tanggal.getTime()) {
+    operations.push(
+      prisma.absensi.deleteMany({
+        where: { idJadwal: p.idJadwal, waktuMasuk: null },
+      })
+    );
+  }
+  operations.push(
     prisma.pengajuan_jadwal.update({
       where: { idPengajuan: p.idPengajuan },
       data: { status: STATUS.DISETUJUI },
       include: includeDetail,
     }),
-    prisma.jadwal.update({ where: { idJadwal: p.idJadwal }, data: slot }),
-  ]);
+    prisma.jadwal.update({ where: { idJadwal: p.idJadwal }, data: slot })
+  );
+
+  const results = await prisma.$transaction(operations);
+  const data = slot.tanggal.getTime() !== p.jadwal.tanggal.getTime() ? results[1] : results[0];
   res.json({ success: true, message: 'Pengajuan disetujui, jadwal diperbarui', data: serializePengajuan(data) });
 });
 
@@ -208,7 +226,7 @@ export const batalkan = asyncHandler(async (req, res) => {
     where: { idPengajuan: req.params.idPengajuan, idPegawai: req.user.idPegawai },
   });
   if (!p) throw new ApiError(404, 'Pengajuan tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
 
   const data = await prisma.pengajuan_jadwal.update({
     where: { idPengajuan: p.idPengajuan },

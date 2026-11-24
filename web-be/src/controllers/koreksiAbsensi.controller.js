@@ -25,7 +25,7 @@ const includeDetail = {
   absensi: {
     include: {
       jadwal: true,
-      pegawai: { select: { idPegawai: true, nama: true, unitKerja: true } },
+      pegawai: { select: { idPegawai: true, nama: true, nip: true, jabatan: true, unitKerja: true } },
     },
   },
 };
@@ -136,7 +136,7 @@ async function ambilKoreksiMenunggu(user, idKoreksi) {
     include: { absensi: { include: { jadwal: true } } },
   });
   if (!k) throw new ApiError(404, 'Pengajuan koreksi tidak ditemukan');
-  if (k.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${k.status}`);
+  if (k.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${k.status}`);
   return k;
 }
 
@@ -193,7 +193,7 @@ export const batalkanKoreksi = asyncHandler(async (req, res) => {
     where: { idKoreksi: req.params.idKoreksi, absensi: { idPegawai: req.user.idPegawai } },
   });
   if (!k) throw new ApiError(404, 'Pengajuan koreksi tidak ditemukan');
-  if (k.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${k.status}`);
+  if (k.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${k.status}`);
 
   const data = await prisma.pengajuan_koreksi.update({
     where: { idKoreksi: k.idKoreksi },

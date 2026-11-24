@@ -48,58 +48,9 @@ export interface UserProfile {
   role: UserRole;
   initials: string;
   sisaJatahCuti?: number;
+  statusPegawai?: string;
+  tanggalMasuk?: string;
 }
-
-export const ROLE_PROFILES: Record<UserRole, UserProfile> = {
-  TENAGA_MEDIS: {
-    idPegawai: "PGW0000001",
-    idAkun: "AKN0000001",
-    nip: "198904122014022001",
-    nama: "Ns. Ayu Lestari, S.Kep., Ns.",
-    jabatan: "Perawat Pelaksana",
-    unit: "Unit Rawat Inap",
-    email: "ayu.lestari@medika.hospital",
-    role: "TENAGA_MEDIS",
-    initials: "AL",
-    sisaJatahCuti: 12,
-  },
-  HRD: {
-    idPegawai: "PGW0000003",
-    idAkun: "AKN0000002",
-    nip: "198205152008011003",
-    nama: "Athaya Rahmania, S.Psi.",
-    jabatan: "Staff HRD & Personalia",
-    unit: "Divisi SDM & Kepegawaian",
-    email: "hrd.athaya@medika.hospital",
-    role: "HRD",
-    initials: "AR",
-    sisaJatahCuti: 12,
-  },
-  SEKRETARIS: {
-    idPegawai: "PGW0000004",
-    idAkun: "AKN0000003",
-    nip: "199103202015022002",
-    nama: "Rizky Ramadhani, A.Md.",
-    jabatan: "Sekretaris Unit Rawat Inap",
-    unit: "Unit Rawat Inap",
-    email: "sekretaris.inap@medika.hospital",
-    role: "SEKRETARIS",
-    initials: "RR",
-    sisaJatahCuti: 10,
-  },
-  KEUANGAN: {
-    idPegawai: "PGW0000005",
-    idAkun: "AKN0000004",
-    nip: "198511102010011005",
-    nama: "Bambang Sudiro, S.E., Ak.",
-    jabatan: "Manajer Keuangan & Payroll",
-    unit: "Divisi Keuangan",
-    email: "payroll.bambang@medika.hospital",
-    role: "KEUANGAN",
-    initials: "BS",
-    sisaJatahCuti: 12,
-  },
-};
 
 function getInitials(name: string): string {
   if (!name) return "RM";
@@ -122,6 +73,14 @@ function mapUserMeToProfile(userMe: UserMe): UserProfile {
     role,
     initials: getInitials(userMe.pegawai?.nama || userMe.username),
     sisaJatahCuti: userMe.pegawai?.sisaJatahCuti,
+    statusPegawai: userMe.pegawai?.statusPegawai || "Aktif",
+    tanggalMasuk: userMe.pegawai?.tanggalMasuk
+      ? new Date(userMe.pegawai.tanggalMasuk).toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "-",
   };
 }
 
@@ -168,20 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("medika_role", profile.role);
       localStorage.setItem("medika_auth", "true");
     } catch (err: any) {
-      // Jika token expired / invalid (401 atau 403), hapus sesi
-      if (err?.status === 401 || err?.status === 403) {
-        setAuthToken(null);
-        setIsAuthenticated(false);
-        setUserProfile(null);
-        localStorage.removeItem("medika_role");
-        localStorage.setItem("medika_auth", "false");
-      } else {
-        // Fallback hanya jika jaringan offline sementara (status === 0)
-        const savedRole = (localStorage.getItem("medika_role") as UserRole) || "TENAGA_MEDIS";
-        setRoleState(savedRole);
-        setUserProfile(ROLE_PROFILES[savedRole]);
-        setIsAuthenticated(true);
-      }
+      // Hapus sesi jika gagal memvalidasi token
+      setAuthToken(null);
+      setIsAuthenticated(false);
+      setUserProfile(null);
+      localStorage.removeItem("medika_role");
+      localStorage.setItem("medika_auth", "false");
     } finally {
       setIsLoading(false);
     }
@@ -231,24 +182,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (navigate) {
           router.push(`/${ROLE_PATHS[profile.role]}/dashboard`);
         }
-      } catch {
-        setRoleState(newRole);
-        setUserProfile(ROLE_PROFILES[newRole]);
-        setIsAuthenticated(true);
-        if (navigate) {
-          router.push(`/${ROLE_PATHS[newRole]}/dashboard`);
-        }
+      } catch (err: any) {
+        setError(err?.message || "Gagal beralih role");
+        throw err;
       } finally {
         setIsLoading(false);
       }
     } else {
-      setRoleState(newRole);
-      setUserProfile(ROLE_PROFILES[newRole]);
-      setIsAuthenticated(true);
       setIsLoading(false);
-      if (navigate) {
-        router.push(`/${ROLE_PATHS[newRole]}/dashboard`);
-      }
     }
   };
 
@@ -267,7 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login");
   };
 
-  const user = isAuthenticated ? (userProfile || ROLE_PROFILES[role]) : null;
+  const user = isAuthenticated ? userProfile : null;
 
   return (
     <AuthContext.Provider

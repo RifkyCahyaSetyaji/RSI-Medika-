@@ -22,10 +22,10 @@ router.post('/', ajukanIzin);
 router.get('/saya', izinSaya);
 router.patch('/:idPengajuan/batal', batalkanIzin);
 
-// Sekretaris Unit memproses; HRD hanya bisa melihat
+// Sekretaris Unit & HRD memproses pengajuan izin
 router.get('/', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), daftarIzin);
-router.patch('/:idPengajuan/setujui', authorize(ROLES.SEKRETARIS_UNIT), setujuiIzin);
-router.patch('/:idPengajuan/tolak', authorize(ROLES.SEKRETARIS_UNIT), tolakIzin);
+router.patch('/:idPengajuan/setujui', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), setujuiIzin);
+router.patch('/:idPengajuan/tolak', authorize(ROLES.SEKRETARIS_UNIT, ROLES.HRD), tolakIzin);
 
 export default router;
 

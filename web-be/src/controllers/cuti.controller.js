@@ -17,7 +17,16 @@ import {
 } from '../services/cuti.service.js';
 
 const includeDetail = {
-  pegawai: { select: { idPegawai: true, nama: true, unitKerja: true, sisaJatahCuti: true } },
+  pegawai: {
+    select: {
+      idPegawai: true,
+      nama: true,
+      nip: true,
+      jabatan: true,
+      unitKerja: true,
+      sisaJatahCuti: true,
+    },
+  },
   surat_hasil_cuti: true,
 };
 
@@ -125,7 +134,7 @@ async function ambilMenunggu(user, idPengajuan) {
     include: { pegawai: true },
   });
   if (!p) throw new ApiError(404, 'Pengajuan cuti tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
   return p;
 }
 
@@ -207,7 +216,7 @@ export const batalkanCuti = asyncHandler(async (req, res) => {
     where: { idPengajuan: req.params.idPengajuan, idPegawai: req.user.idPegawai },
   });
   if (!p) throw new ApiError(404, 'Pengajuan cuti tidak ditemukan');
-  if (p.status !== STATUS.MENUNGGU) throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
+  if (p.status.toLowerCase() !== 'menunggu') throw new ApiError(400, `Pengajuan sudah berstatus ${p.status}`);
 
   const data = await prisma.pengajuan_cuti.update({
     where: { idPengajuan: p.idPengajuan },

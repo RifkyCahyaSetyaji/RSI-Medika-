@@ -32,9 +32,27 @@ interface AbsensiRecord {
   status: string;
 }
 
+const extractTime = (str?: string | null): string => {
+  if (!str || typeof str !== "string") return "";
+  if (str.length >= 16 && (str.includes("T") || str.includes(" "))) {
+    return str.slice(11, 16);
+  }
+  return str.slice(0, 5);
+};
+
+const formatShiftRange = (jadwal?: any): string => {
+  if (!jadwal) return "Batas toleransi kehadiran: 15 menit sebelum shift dimulai";
+  const startRaw = jadwal.jamMulai || jadwal.mulai;
+  const endRaw = jadwal.jamSelesai || jadwal.selesai;
+  if (!startRaw || !endRaw) return "Batas toleransi kehadiran: 15 menit sebelum shift dimulai";
+  const start = extractTime(startRaw).replace(":", ".");
+  const end = extractTime(endRaw).replace(":", ".");
+  return `${start} – ${end} WIB`;
+};
+
 export default function AbsensiPage() {
   const [currentTime, setCurrentTime] = useState<string>("07:00:00");
-  const [currentDateFormatted, setCurrentDateFormatted] = useState<string>("Senin, 12 Mei 2025");
+  const [currentDateFormatted, setCurrentDateFormatted] = useState<string>("Senin, 12 November 2026");
   const [hasClockedIn, setHasClockedIn] = useState<boolean>(false);
   const [hasClockedOut, setHasClockedOut] = useState<boolean>(false);
   const [clockInTime, setClockInTime] = useState<string>("");
@@ -48,72 +66,7 @@ export default function AbsensiPage() {
   const [toastError, setToastError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string>("");
 
-  const [records, setRecords] = useState<AbsensiRecord[]>([
-    {
-      id: "1",
-      tanggal: "Sen, 12 Mei 2025",
-      jamMasuk: "06.59",
-      jamKeluar: "14.02",
-      durasi: "7 jam 3 menit",
-      status: "Hadir",
-    },
-    {
-      id: "2",
-      tanggal: "Jum, 9 Mei 2025",
-      jamMasuk: "06.59",
-      jamKeluar: "14.02",
-      durasi: "7 jam 3 menit",
-      status: "Hadir",
-    },
-    {
-      id: "3",
-      tanggal: "Kam, 8 Mei 2025",
-      jamMasuk: "07.01",
-      jamKeluar: "14.05",
-      durasi: "7 jam 4 menit",
-      status: "Hadir",
-    },
-    {
-      id: "4",
-      tanggal: "Rab, 7 Mei 2025",
-      jamMasuk: "06.55",
-      jamKeluar: "14.00",
-      durasi: "7 jam 5 menit",
-      status: "Hadir",
-    },
-    {
-      id: "5",
-      tanggal: "Sel, 6 Mei 2025",
-      jamMasuk: "07.10",
-      jamKeluar: "14.00",
-      durasi: "6 jam 50 menit",
-      status: "Terlambat",
-    },
-    {
-      id: "6",
-      tanggal: "Sen, 5 Mei 2025",
-      jamMasuk: "06.58",
-      jamKeluar: "14.03",
-      durasi: "7 jam 5 menit",
-      status: "Hadir",
-    },
-    {
-      id: "7",
-      tanggal: "Jum, 2 Mei 2025",
-      jamMasuk: "-",
-      jamKeluar: "-",
-      durasi: "-",
-      status: "Izin",
-    },
-    {
-      id: "8",
-      tanggal: "Kam, 1 Mei 2025",
-      jamMasuk: "06.50",
-      jamKeluar: "14.01",
-      durasi: "7 jam 11 menit",
-      status: "Hadir",
-    },
-  ]);
+  const [records, setRecords] = useState<AbsensiRecord[]>([]);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -166,17 +119,13 @@ export default function AbsensiPage() {
         const currentAbsen = statusRes.absensiBerjalan[0];
         if (currentAbsen.waktuMasuk) {
           setHasClockedIn(true);
-          const masukDate = new Date(currentAbsen.waktuMasuk);
-          setClockInTime(
-            `${String(masukDate.getHours()).padStart(2, "0")}.${String(masukDate.getMinutes()).padStart(2, "0")} WIB`
-          );
+          const timeStr = currentAbsen.jamMasuk || extractTime(currentAbsen.waktuMasuk);
+          setClockInTime(`${timeStr.replace(":", ".")} WIB`);
         }
         if (currentAbsen.waktuPulang) {
           setHasClockedOut(true);
-          const keluarDate = new Date(currentAbsen.waktuPulang);
-          setClockOutTime(
-            `${String(keluarDate.getHours()).padStart(2, "0")}.${String(keluarDate.getMinutes()).padStart(2, "0")} WIB`
-          );
+          const timeStr = currentAbsen.jamKeluar || extractTime(currentAbsen.waktuPulang);
+          setClockOutTime(`${timeStr.replace(":", ".")} WIB`);
         }
       }
 
@@ -185,71 +134,56 @@ export default function AbsensiPage() {
       if (riwayatRes && riwayatRes.length > 0) {
         // Cek apakah ada record absensi hari ini di riwayat jika absensiBerjalan kosong
         const now = new Date();
-        const todayYear = now.getFullYear();
-        const todayMonth = now.getMonth();
-        const todayDate = now.getDate();
+        const todayStr = now.toISOString().split("T")[0];
 
-        const latestRecord = riwayatRes[0];
-        if (latestRecord && latestRecord.tanggal) {
-          const recDate = new Date(latestRecord.tanggal);
-          if (
-            recDate.getFullYear() === todayYear &&
-            recDate.getMonth() === todayMonth &&
-            recDate.getDate() === todayDate
-          ) {
-            if (latestRecord.waktuMasuk) {
-              setHasClockedIn(true);
-              const mDate = new Date(latestRecord.waktuMasuk);
-              setClockInTime(
-                `${String(mDate.getHours()).padStart(2, "0")}.${String(mDate.getMinutes()).padStart(2, "0")} WIB`
-              );
-            }
-            if (latestRecord.waktuPulang) {
-              setHasClockedOut(true);
-              const kDate = new Date(latestRecord.waktuPulang);
-              setClockOutTime(
-                `${String(kDate.getHours()).padStart(2, "0")}.${String(kDate.getMinutes()).padStart(2, "0")} WIB`
-              );
-            }
+        const todayRecord = riwayatRes.find((r) => r.tanggal?.startsWith(todayStr)) || riwayatRes[0];
+        if (todayRecord && todayRecord.tanggal?.startsWith(todayStr)) {
+          if (todayRecord.waktuMasuk) {
+            setHasClockedIn(true);
+            const timeStr = todayRecord.jamMasuk || extractTime(todayRecord.waktuMasuk);
+            setClockInTime(`${timeStr.replace(":", ".")} WIB`);
+          }
+          if (todayRecord.waktuPulang) {
+            setHasClockedOut(true);
+            const timeStr = todayRecord.jamKeluar || extractTime(todayRecord.waktuPulang);
+            setClockOutTime(`${timeStr.replace(":", ".")} WIB`);
           }
         }
 
-        const mappedRecords: AbsensiRecord[] = riwayatRes.map((r: AbsensiItem) => {
-          const tgl = new Date(r.tanggal);
-          const tglStr = tgl.toLocaleDateString("id-ID", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-          });
-          const masukStr = r.waktuMasuk
-            ? new Date(r.waktuMasuk).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-            : "-";
-          const keluarStr = r.waktuPulang
-            ? new Date(r.waktuPulang).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
-            : "-";
-
-          let durasiStr = "-";
-          if (r.waktuMasuk && r.waktuPulang) {
-            const diffMs = new Date(r.waktuPulang).getTime() - new Date(r.waktuMasuk).getTime();
-            const diffHrs = Math.floor(diffMs / 3600000);
-            const diffMins = Math.floor((diffMs % 3600000) / 60000);
-            durasiStr = `${diffHrs} jam ${diffMins} menit`;
+        const mappedRecords: AbsensiRecord[] = riwayatRes.map((r: AbsensiItem, idx: number) => {
+          let tglStr = r.tanggal || "-";
+          if (r.tanggal) {
+            const parts = r.tanggal.split("-");
+            if (parts.length === 3) {
+              const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+              tglStr = d.toLocaleDateString("id-ID", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+              });
+            }
           }
 
+          const masukStr = r.jamMasuk || (r.waktuMasuk ? extractTime(r.waktuMasuk) : "-");
+          const keluarStr = r.jamKeluar || (r.waktuPulang ? extractTime(r.waktuPulang) : "-");
+          const durasiStr = r.durasi || "-";
+
           return {
-            id: r.idAbsensi,
+            id: r.idAbsensi || `jdw-${r.idJadwal || idx}`,
             tanggal: tglStr,
             jamMasuk: masukStr,
             jamKeluar: keluarStr,
             durasi: durasiStr,
-            status: r.statusKehadiran || "Hadir",
+            status: r.status || r.statusKehadiran || "Hadir",
           };
         });
         setRecords(mappedRecords);
+      } else {
+        setRecords([]);
       }
     } catch {
-      // Biarkan fallback data tetap tampil
+      setRecords([]);
     } finally {
       setIsLoadingData(false);
     }
@@ -275,9 +209,6 @@ export default function AbsensiPage() {
       loadAbsensiData();
     } catch (err: any) {
       setToastError(err?.message || "Gagal melakukan absen masuk.");
-      // Fallback state
-      setHasClockedIn(true);
-      setClockInTime("07.02 WIB");
     } finally {
       setIsLoadingAction(false);
     }
@@ -299,8 +230,6 @@ export default function AbsensiPage() {
       loadAbsensiData();
     } catch (err: any) {
       setToastError(err?.message || "Gagal melakukan absen pulang.");
-      setHasClockedOut(true);
-      setClockOutTime("14.05 WIB");
     } finally {
       setIsLoadingAction(false);
     }
@@ -310,6 +239,12 @@ export default function AbsensiPage() {
     e.preventDefault();
     if (endDate < startDate) {
       setToastError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
+      return;
+    }
+
+    const isSakit = leaveType.toLowerCase().includes("sakit");
+    if (isSakit && !attachedFile) {
+      setToastError("Pengajuan Izin Sakit wajib melampirkan berkas pendukung (surat keterangan dokter).");
       return;
     }
 
@@ -324,11 +259,13 @@ export default function AbsensiPage() {
           alasan: leaveReason,
         });
       } else {
+        const jenisClean = isSakit ? "Sakit" : "Izin";
         await izinService.ajukanIzin({
           tanggalMulai: startDate,
           tanggalSelesai: endDate,
-          jenis: leaveType,
+          jenis: jenisClean,
           alasan: leaveReason,
+          berkasPendukung: attachedFile ? attachedFile.name : undefined,
         });
       }
       setShowLeaveModal(false);
@@ -338,8 +275,8 @@ export default function AbsensiPage() {
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 4000);
     } catch (err: any) {
-      setToastError(err?.message || "Pengajuan gagal dikirim.");
-      setShowLeaveModal(false);
+      const msg = err?.response?.data?.message || err?.message || "Pengajuan gagal dikirim.";
+      setToastError(msg);
     } finally {
       setIsLoadingAction(false);
     }
@@ -451,8 +388,8 @@ export default function AbsensiPage() {
                 {hasClockedIn && hasClockedOut
                   ? "Status Hari Ini: Selesai Bertugas (Hadir)"
                   : hasClockedIn
-                  ? "Status Hari Ini: Sedang Bertugas"
-                  : "Status Hari Ini: Belum Melakukan Presensi"}
+                    ? "Status Hari Ini: Sedang Bertugas"
+                    : "Status Hari Ini: Belum Melakukan Presensi"}
               </span>
             </div>
 
@@ -493,8 +430,8 @@ export default function AbsensiPage() {
                   hasClockedOut
                     ? "bg-[#D8F0D3] text-[#0E6100] border border-[#0E6100]/20 cursor-not-allowed"
                     : hasClockedIn
-                    ? "bg-[#9A2500] hover:bg-[#801F00] text-white cursor-pointer"
-                    : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                      ? "bg-[#9A2500] hover:bg-[#801F00] text-white cursor-pointer"
+                      : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
                 )}
               >
                 {isLoadingAction && hasClockedIn && !hasClockedOut ? (
@@ -546,9 +483,7 @@ export default function AbsensiPage() {
                 {statusInfo?.jadwalAktif?.[0]?.jenisJadwal || "Shift Pagi (07.00 - 14.00 WIB)"}
               </h4>
               <p className="text-xs text-[#5F5F5F] mt-0.5">
-                {statusInfo?.jadwalAktif?.[0]
-                  ? `${statusInfo.jadwalAktif[0].jamMulai.slice(11, 16)} – ${statusInfo.jadwalAktif[0].jamSelesai.slice(11, 16)} WIB`
-                  : "Batas toleransi kehadiran: 15 menit sebelum shift dimulai"}
+                {formatShiftRange(statusInfo?.jadwalAktif?.[0])}
               </p>
             </div>
           </div>
@@ -664,6 +599,18 @@ export default function AbsensiPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {toastError && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{toastError}</span>
+                </div>
+                <button type="button" onClick={() => setToastError(null)} className="cursor-pointer ml-2 text-red-600 hover:text-red-800">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleSubmitLeave} className="space-y-4">
               <div className="space-y-1.5">

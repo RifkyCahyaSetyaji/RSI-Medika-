@@ -28,52 +28,25 @@ interface ShiftData {
 }
 
 export default function JadwalPage() {
-  const [selectedDay, setSelectedDay] = useState<number>(12);
+  const [selectedDay, setSelectedDay] = useState<number>(() => new Date().getDate());
   const [showDetailModal, setShowDetailModal] = useState<boolean>(false);
   const [showChangeModal, setShowChangeModal] = useState<boolean>(false);
   const [reason, setReason] = useState<string>("");
-  const [requestedDate, setRequestedDate] = useState<string>("2025-05-13");
+  const [requestedDate, setRequestedDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
   const [requestedShift, setRequestedShift] = useState<string>("Siang");
   const [submittedAlert, setSubmittedAlert] = useState<boolean>(false);
   const [alertError, setAlertError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Fallback shifts
-  const defaultShiftMap: Record<number, ShiftData> = {
-    1: { day: 1, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Kamis, 1 Mei 2025" },
-    2: { day: 2, shift: "Malam", hours: "21.00–07.00 WIB", unit: "Rawat Inap", dateStr: "Jumat, 2 Mei 2025" },
-    5: { day: 5, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Senin, 5 Mei 2025" },
-    6: { day: 6, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Selasa, 6 Mei 2025" },
-    7: { day: 7, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Rabu, 7 Mei 2025" },
-    8: { day: 8, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Kamis, 8 Mei 2025" },
-    9: { day: 9, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Jumat, 9 Mei 2025" },
-    10: { day: 10, shift: "Malam", hours: "21.00–07.00 WIB", unit: "Rawat Inap", dateStr: "Sabtu, 10 Mei 2025" },
-    12: { day: 12, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Senin, 12 Mei 2025" },
-    13: { day: 13, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Selasa, 13 Mei 2025" },
-    14: { day: 14, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Rabu, 14 Mei 2025" },
-    15: { day: 15, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Kamis, 15 Mei 2025" },
-    16: { day: 16, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Jumat, 16 Mei 2025" },
-    17: { day: 17, shift: "Malam", hours: "21.00–07.00 WIB", unit: "Rawat Inap", dateStr: "Sabtu, 17 Mei 2025" },
-    20: { day: 20, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Selasa, 20 Mei 2025" },
-    21: { day: 21, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Rabu, 21 Mei 2025" },
-    22: { day: 22, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Kamis, 22 Mei 2025" },
-    23: { day: 23, shift: "Malam", hours: "21.00–07.00 WIB", unit: "Rawat Inap", dateStr: "Jumat, 23 Mei 2025" },
-    26: { day: 26, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Senin, 26 Mei 2025" },
-    27: { day: 27, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Selasa, 27 Mei 2025" },
-    28: { day: 28, shift: "Siang", hours: "14.00–21.00 WIB", unit: "Rawat Inap", dateStr: "Rabu, 28 Mei 2025" },
-    29: { day: 29, shift: "Pagi", hours: "07.00–14.00 WIB", unit: "Rawat Inap", dateStr: "Kamis, 29 Mei 2025" },
-    30: { day: 30, shift: "Malam", hours: "21.00–07.00 WIB", unit: "Rawat Inap", dateStr: "Jumat, 30 Mei 2025" },
-  };
-
-  const [shiftMap, setShiftMap] = useState<Record<number, ShiftData>>(defaultShiftMap);
+  const [shiftMap, setShiftMap] = useState<Record<number, ShiftData>>({});
 
   const loadJadwal = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await jadwalService.jadwalSaya();
       if (data && data.length > 0) {
-        const newMap = { ...defaultShiftMap };
+        const newMap: Record<number, ShiftData> = {};
         data.forEach((j: JadwalItem) => {
           const d = new Date(j.tanggal);
           const dayNum = d.getDate();
@@ -100,9 +73,11 @@ export default function JadwalPage() {
           };
         });
         setShiftMap(newMap);
+      } else {
+        setShiftMap({});
       }
     } catch {
-      // Pertahankan map bawaan jika offline
+      setShiftMap({});
     } finally {
       setIsLoading(false);
     }
@@ -112,13 +87,7 @@ export default function JadwalPage() {
     loadJadwal();
   }, [loadJadwal]);
 
-  const selectedShift = shiftMap[selectedDay] || {
-    day: selectedDay,
-    shift: "Pagi",
-    hours: "07.00–14.00 WIB",
-    unit: "Rawat Inap",
-    dateStr: `Mei ${selectedDay}, 2025`,
-  };
+  const selectedShift = shiftMap[selectedDay] || null;
 
   const prevMonthDays = [27, 28, 29, 30];
   const currentMonthDays = Array.from({ length: 31 }, (_, i) => i + 1);
@@ -214,7 +183,7 @@ export default function JadwalPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <h3 className="font-bold text-base sm:text-lg text-[#202020]">
-              Mei 2025
+              {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
             </h3>
             <button
               type="button"
@@ -317,26 +286,33 @@ export default function JadwalPage() {
             </span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-[#F2F0FD] border border-[#C4BAF5]/40 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#4731B6]">
-              <CalendarIcon className="w-4 h-4" />
-              <span>{selectedShift.dateStr}</span>
-            </div>
+          {selectedShift ? (
+            <div className="p-4 rounded-2xl bg-[#F2F0FD] border border-[#C4BAF5]/40 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-[#4731B6]">
+                <CalendarIcon className="w-4 h-4" />
+                <span>{selectedShift.dateStr}</span>
+              </div>
 
-            <div className="space-y-1">
-              <h4 className="font-bold text-lg text-[#202020]">
-                Shift {selectedShift.shift}
-              </h4>
-              <div className="flex items-center gap-2 text-xs text-[#5F5F5F]">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
-                <span>{selectedShift.hours}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-[#5F5F5F]">
-                <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                <span>Unit: {selectedShift.unit}</span>
+              <div className="space-y-1">
+                <h4 className="font-bold text-lg text-[#202020]">
+                  Shift {selectedShift.shift}
+                </h4>
+                <div className="flex items-center gap-2 text-xs text-[#5F5F5F]">
+                  <Clock className="w-3.5 h-3.5 text-gray-400" />
+                  <span>{selectedShift.hours}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-[#5F5F5F]">
+                  <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                  <span>Unit: {selectedShift.unit}</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 text-center space-y-2">
+              <CalendarIcon className="w-6 h-6 text-gray-400 mx-auto" />
+              <p className="text-xs text-[#7E7E7E]">Tidak ada jadwal dinas pada tanggal ini.</p>
+            </div>
+          )}
 
           <button
             type="button"
@@ -359,11 +335,11 @@ export default function JadwalPage() {
             setTimeout(() => setSubmittedAlert(false), 5000);
           }}
           initialData={{
-            idJadwal: selectedShift.idJadwal,
-            tanggalStr: selectedShift.dateStr,
-            jamStr: selectedShift.hours,
-            jenisJadwal: selectedShift.shift,
-            ruangan: selectedShift.unit,
+            idJadwal: selectedShift?.idJadwal,
+            tanggalStr: selectedShift?.dateStr || "",
+            jamStr: selectedShift?.hours || "",
+            jenisJadwal: selectedShift?.shift || "Pagi",
+            ruangan: selectedShift?.unit || "",
           }}
         />
       )}

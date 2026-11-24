@@ -28,6 +28,11 @@ export const includeGaji = {
       jabatan: true,
       unitKerja: true,
       peran_tenaga_medis: { select: { idPeran: true, namaPeran: true, kategori: true } },
+      pegawai_peran: {
+        include: {
+          peran_tenaga_medis: true,
+        },
+      },
       rekening_pegawai: true,
     },
   },
@@ -215,39 +220,142 @@ export function serializeGaji(g, ekstra = {}) {
 /** Susun rincian lengkap slip gaji (metrik absensi + rincian tunjangan & potongan). */
 export async function susunRincianSlip(gaji) {
   const metrik = await rekapKehadiranBulanan(gaji.idPegawai, gaji.periodeGaji);
-  const pedoman =
-    gaji.pedoman_penggajian ?? (await cariPedomanBerlaku(gaji.pegawai?.peran_tenaga_medis?.idPeran, gaji.periodeGaji));
+  
+  // Ambil semua peran yang dimiliki pegawai
+  const peranList = (gaji.pegawai?.pegawai_peran && gaji.pegawai.pegawai_peran.length > 0)
+    ? gaji.pegawai.pegawai_peran.map((pp) => pp.peran_tenaga_medis).filter(Boolean)
+    : (gaji.pegawai?.peran_tenaga_medis ? [gaji.pegawai.peran_tenaga_medis] : []);
 
+  let rincianPeranList = [];
   let rincian = null;
-  if (pedoman) {
-    const dasar = hitungKomponenGaji(pedoman, metrik);
-    const selisihTunjangan = Number(gaji.tunjangan) - dasar.tunjangan;
-    const selisihPotongan = Number(gaji.potongan) - dasar.potongan;
-    rincian = hitungKomponenGaji(pedoman, {
-      ...metrik,
-      tunjanganTambahan: selisihTunjangan,
-      potonganTambahan: selisihPotongan,
-    });
+
+  if (peranList.length > 0) {
+    for (const prn of peranList) {
+      const pd = await cariPedomanBerlaku(prn.idPeran, gaji.periodeGaji);
+      if (pd) {
+        const komp = hitungKomponenGaji(pd, metrik);
+        rincianPeranList.push({
+          peran: prn,
+          pedoman: serializePedoman(pd),
+          komponen: komp,
+        });
+      }
+    }
+  }
+
+  if (rincianPeranList.length > 0) {
+    // Akumulasi komponen dasar dari semua peran yang dimiliki
+    let sumTunjanganJabatan = 0;
+    let sumTunjanganShiftMalam = 0;
+    let sumUangLembur = 0;
+    let sumTunjanganKehadiran = 0;
+    let sumInsentifJasaMedis = 0;
+    let sumPotonganTidakHadir = 0;
+    let sumPotonganTerlambat = 0;
+    let sumDasarTunjangan = 0;
+    let sumDasarPotongan = 0;
+
+    for (const rp of rincianPeranList) {
+      const k = rp.komponen;
+      sumTunjanganJabatan += k.rincianTunjangan.tunjanganJabatan;
+      sumTunjanganShiftMalam += k.rincianTunjangan.tunjanganShiftMalam;
+      sumUangLembur += k.rincianTunjangan.uangLembur;
+      sumTunjanganKehadiran += k.rincianTunjangan.tunjanganKehadiran;
+      sumInsentifJasaMedis += k.rincianTunjangan.insentifJasaMedis;
+      sumPotonganTidakHadir += k.rincianPotongan.potonganTidakHadir;
+      sumPotonganTerlambat += k.rincianPotongan.potonganTerlambat;
+      sumDasarTunjangan += k.tunjangan;
+      sumDasarPotongan += k.potongan;
+    }
+
+    const selisihTunjangan = round2(Number(gaji.tunjangan) - sumDasarTunjangan);
+    const selisihPotongan = round2(Number(gaji.potongan) - sumDasarPotongan);
+
+    rincian = {
+      rincianTunjangan: {
+        tunjanganJabatan: round2(sumTunjanganJabatan),
+        tunjanganShiftMalam: round2(sumTunjanganShiftMalam),
+        uangLembur: round2(sumUangLembur),
+        tunjanganKehadiran: round2(sumTunjanganKehadiran),
+        insentifJasaMedis: round2(sumInsentifJasaMedis),
+        tunjanganTambahan: selisihTunjangan,
+      },
+      rincianPotongan: {
+        potonganTidakHadir: round2(sumPotonganTidakHadir),
+        potonganTerlambat: round2(sumPotonganTerlambat),
+        potonganTambahan: selisihPotongan,
+      },
+    };
+  } else {
+    const pedoman =
+      gaji.pedoman_penggajian ?? (await cariPedomanBerlaku(gaji.pegawai?.peran_tenaga_medis?.idPeran, gaji.periodeGaji));
+
+    if (pedoman) {
+      const dasar = hitungKomponenGaji(pedoman, metrik);
+      const selisihTunjangan = round2(Number(gaji.tunjangan) - dasar.tunjangan);
+      const selisihPotongan = round2(Number(gaji.potongan) - dasar.potongan);
+      rincian = hitungKomponenGaji(pedoman, {
+        ...metrik,
+        tunjanganTambahan: selisihTunjangan,
+        potonganTambahan: selisihPotongan,
+      });
+    } else {
+      // Fallback jika tidak ada peran medis atau pedoman
+      rincian = {
+        rincianTunjangan: {
+          tunjanganJabatan: round2(Number(gaji.tunjangan)),
+          tunjanganShiftMalam: 0,
+          uangLembur: 0,
+          tunjanganKehadiran: 0,
+          insentifJasaMedis: 0,
+          tunjanganTambahan: 0,
+        },
+        rincianPotongan: {
+          potonganTidakHadir: 0,
+          potonganTerlambat: 0,
+          potonganTambahan: round2(Number(gaji.potongan)),
+        },
+      };
+    }
   }
 
   return serializeGaji(gaji, {
     metrikKehadiran: metrik,
     rincianTunjangan: rincian?.rincianTunjangan ?? null,
     rincianPotongan: rincian?.rincianPotongan ?? null,
+    rincianPerPeran: rincianPeranList,
   });
 }
 
-/** Hitung & simpan (upsert) gaji 1 pegawai untuk suatu periode. */
+/** Hitung & simpan (upsert) gaji 1 pegawai untuk suatu periode. Mendukung multi-peran kumulatif. */
 export async function prosesHitungPegawai(pegawai, periode, inputManual = {}) {
-  if (!pegawai.idPeran) {
-    throw new ApiError(400, `Pegawai ${pegawai.nama} belum memiliki peran tenaga medis (idPeran kosong)`);
+  // Ambil semua peran yang terdaftar untuk pegawai
+  const pegawaiPerans = await prisma.pegawai_peran.findMany({
+    where: { idPegawai: pegawai.idPegawai },
+    include: { peran_tenaga_medis: true },
+  });
+
+  let daftarPeran = pegawaiPerans.map((pp) => pp.peran_tenaga_medis).filter(Boolean);
+  if (daftarPeran.length === 0 && pegawai.idPeran) {
+    const p = await prisma.peran_tenaga_medis.findUnique({ where: { idPeran: pegawai.idPeran } });
+    if (p) daftarPeran = [p];
   }
-  const pedoman = await cariPedomanBerlaku(pegawai.idPeran, periode);
-  if (!pedoman) {
-    throw new ApiError(
-      400,
-      `Belum ada pedoman penggajian yang berlaku untuk peran ${pegawai.peran_tenaga_medis?.namaPeran ?? pegawai.idPeran} pada periode ${periode}`,
-    );
+
+  if (daftarPeran.length === 0) {
+    throw new ApiError(400, `Pegawai ${pegawai.nama} belum memiliki peran tenaga medis`);
+  }
+
+  // Cari pedoman penggajian untuk masing-masing peran
+  const peranDanPedoman = [];
+  for (const peran of daftarPeran) {
+    const pedoman = await cariPedomanBerlaku(peran.idPeran, periode);
+    if (!pedoman) {
+      throw new ApiError(
+        400,
+        `Belum ada pedoman penggajian yang berlaku untuk peran ${peran.namaPeran} pada periode ${periode}`,
+      );
+    }
+    peranDanPedoman.push({ peran, pedoman });
   }
 
   const existing = await prisma.penggajian.findFirst({
@@ -270,16 +378,46 @@ export async function prosesHitungPegawai(pegawai, periode, inputManual = {}) {
     potonganTambahan: inputManual.potonganTambahan ?? 0,
   };
 
-  const hasil = hitungKomponenGaji(pedoman, metrik);
+  // Hitung komponen gaji untuk seluruh peran dan jumlahkan (kumulatif gaji keduanya/semua peran)
+  let totalGajiPokok = 0;
+  let totalTunjangan = 0;
+  let totalPotongan = 0;
+  const rincianPerPeran = [];
+
+  for (let i = 0; i < peranDanPedoman.length; i++) {
+    const { peran, pedoman } = peranDanPedoman[i];
+    // Untuk peran pertama, masukkan tunjangan/potongan tambahan jika ada
+    const metrikPeran = {
+      ...metrik,
+      tunjanganTambahan: i === 0 ? metrik.tunjanganTambahan : 0,
+      potonganTambahan: i === 0 ? metrik.potonganTambahan : 0,
+    };
+    const hasil = hitungKomponenGaji(pedoman, metrikPeran);
+    totalGajiPokok += hasil.gajiPokok;
+    totalTunjangan += hasil.tunjangan;
+    totalPotongan += hasil.potongan;
+    rincianPerPeran.push({
+      peran,
+      pedoman: serializePedoman(pedoman),
+      komponen: hasil,
+    });
+  }
+
+  totalGajiPokok = round2(totalGajiPokok);
+  totalTunjangan = round2(totalTunjangan);
+  totalPotongan = round2(totalPotongan);
+  const grandTotalGaji = Math.max(0, round2(totalGajiPokok + totalTunjangan - totalPotongan));
+
+  const primaryPedoman = peranDanPedoman[0].pedoman;
 
   const payload = {
     idPegawai: pegawai.idPegawai,
     periodeGaji: periode,
-    idPedoman: pedoman.idPedoman,
-    gajiPokok: hasil.gajiPokok,
-    tunjangan: hasil.tunjangan,
-    potongan: hasil.potongan,
-    totalGaji: hasil.totalGaji,
+    idPedoman: primaryPedoman.idPedoman,
+    gajiPokok: totalGajiPokok,
+    tunjangan: totalTunjangan,
+    potongan: totalPotongan,
+    totalGaji: grandTotalGaji,
     statusPembayaran: existing?.statusPembayaran ?? STATUS_PEMBAYARAN.BELUM_DIBAYAR,
   };
 
@@ -289,7 +427,6 @@ export async function prosesHitungPegawai(pegawai, periode, inputManual = {}) {
 
   return serializeGaji(record, {
     metrikKehadiran: metrik,
-    rincianTunjangan: hasil.rincianTunjangan,
-    rincianPotongan: hasil.rincianPotongan,
+    rincianPerPeran,
   });
 }

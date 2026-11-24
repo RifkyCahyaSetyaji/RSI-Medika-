@@ -20,6 +20,7 @@ import {
   Edit2,
   ChevronRight,
   Filter,
+  Trash2,
 } from "lucide-react";
 import { pedomanGajiService } from "@/shared/services/api/pedoman-gaji.service";
 import { hrdService } from "@/shared/services/api/hrd.service";
@@ -35,12 +36,15 @@ export default function PedomanGajiPage() {
   const [selectedKategori, setSelectedKategori] = useState<string>("Semua");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPedoman, setSelectedPedoman] = useState<PedomanGajiItem | null>(null);
+  const [pedomanToDelete, setPedomanToDelete] = useState<PedomanGajiItem | null>(null);
 
   const [pedomanList, setPedomanList] = useState<PedomanGajiItem[]>([]);
   const [peranList, setPeranList] = useState<PeranTenagaMedis[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const [toastMsg, setToastMsg] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
@@ -135,6 +139,32 @@ export default function PedomanGajiPage() {
       keterangan: p.keterangan || "",
     });
     setShowEditModal(true);
+  };
+
+  const handleOpenDelete = (p: PedomanGajiItem) => {
+    setPedomanToDelete(p);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pedomanToDelete) return;
+    setIsDeleting(true);
+    try {
+      await pedomanGajiService.hapusPedoman(pedomanToDelete.idPedoman);
+      setPedomanList((prev) => prev.filter((item) => item.idPedoman !== pedomanToDelete.idPedoman));
+      triggerToast(
+        `Pedoman gaji untuk ${pedomanToDelete.peran_tenaga_medis?.namaPeran || "peran tersebut"} berhasil dihapus!`,
+        "success"
+      );
+      setShowDeleteModal(false);
+      setPedomanToDelete(null);
+      if (showEditModal) setShowEditModal(false);
+    } catch (err: any) {
+      const errorMsg = err?.data?.message || err?.message || "Gagal menghapus pedoman gaji.";
+      triggerToast(errorMsg, "error");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -389,14 +419,22 @@ export default function PedomanGajiPage() {
               </div>
 
               {/* Action Button */}
-              <div className="pt-4 mt-2 border-t border-gray-100">
+              <div className="pt-4 mt-2 border-t border-gray-100 flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleOpenEdit(item)}
-                  className="w-full py-2.5 px-4 rounded-xl border border-[#4731B6] text-[#4731B6] hover:bg-[#F2F1F9] font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-3 rounded-xl border border-[#4731B6] text-[#4731B6] hover:bg-[#F2F1F9] font-semibold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                   <span>Kelola pedoman</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleOpenDelete(item)}
+                  title="Hapus pedoman gaji"
+                  className="p-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -770,6 +808,14 @@ export default function PedomanGajiPage() {
                   Batal
                 </button>
                 <button
+                  type="button"
+                  onClick={() => handleOpenDelete(selectedPedoman)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Hapus Pedoman</span>
+                </button>
+                <button
                   type="submit"
                   disabled={isSubmitting}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-[#4731B6] hover:bg-[#3B289E] text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer flex items-center justify-center gap-2"
@@ -779,6 +825,82 @@ export default function PedomanGajiPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Pedoman */}
+      {showDeleteModal && pedomanToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+          <div
+            className="w-full max-w-md bg-white rounded-[24px] sm:rounded-[28px] p-6 sm:p-8 shadow-2xl border border-gray-100 flex flex-col items-center text-center space-y-5 animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shadow-inner">
+              <Trash2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-[#202020]">Hapus Pedoman Gaji</h3>
+              <p className="text-xs sm:text-sm text-[#5F5F5F] leading-relaxed">
+                Apakah Anda yakin ingin menghapus pedoman gaji untuk peran{" "}
+                <span className="font-semibold text-gray-900">
+                  {pedomanToDelete.peran_tenaga_medis?.namaPeran || "ini"}
+                </span>
+                ? Tindakan ini tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            {/* Detail Box */}
+            <div className="w-full bg-[#FAF9FF] p-3.5 rounded-2xl border border-[#ECEAF8] text-left text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-[#5F5F5F]">Gaji Pokok:</span>
+                <span className="font-bold text-[#202020]">{formatRp(pedomanToDelete.gajiPokok)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#5F5F5F]">Mulai Berlaku:</span>
+                <span className="font-medium text-[#202020]">
+                  {pedomanToDelete.berlakuMulai ? String(pedomanToDelete.berlakuMulai).split("T")[0] : "-"}
+                </span>
+              </div>
+              {pedomanToDelete.keterangan && (
+                <div className="pt-1 border-t border-[#ECEAF8] text-[#7E7E7E] italic line-clamp-2">
+                  &ldquo;{pedomanToDelete.keterangan}&rdquo;
+                </div>
+              )}
+            </div>
+
+            <div className="flex w-full items-center gap-3 pt-2">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setPedomanToDelete(null);
+                }}
+                className="flex-1 px-5 py-2.5 sm:py-3 rounded-xl border border-gray-300 text-xs sm:text-sm font-medium text-[#3F3F3F] hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteConfirm}
+                className="flex-1 px-5 py-2.5 sm:py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs sm:text-sm font-semibold text-white shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Menghapus...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Ya, Hapus</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

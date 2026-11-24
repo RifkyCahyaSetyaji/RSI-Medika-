@@ -34,15 +34,30 @@ export interface SalaryPeriodData {
   tanggalBayar: string;
   gajiPokok: number;
   tunjanganPeran: number;
+  tunjanganKehadiran: number;
   tugasTambahan: number;
   insentifShift: number;
+  insentifJasaMedis: number;
+  tunjanganTambahan: number;
   potonganAbsensi: number;
+  potonganTidakHadir: number;
+  potonganTerlambat: number;
+  potonganTambahan: number;
   bpjsKesehatan: number;
   bpjsKetenagakerjaan: number;
   pph21: number;
   status: "Terbayar" | "Diproses";
   nomorRekening?: string;
   namaBank?: string;
+  metrikKehadiran?: {
+    totalJadwalReguler?: number;
+    hariHadir?: number;
+    jumlahTerlambat?: number;
+    jumlahShiftMalam?: number;
+    jamLembur?: number;
+    hariAlpa?: number;
+    hariCutiIzin?: number;
+  };
 }
 
 interface SalaryDetailViewProps {
@@ -53,96 +68,10 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
   const { user } = useAuth();
 
   // Rekening pegawai
-  const [userRekening, setUserRekening] = useState<string>("Bank Mandiri •••• 9381");
+  const [userRekening, setUserRekening] = useState<string>("Belum Terdaftar");
 
-  // Default initial period list (Mei 2025 to Jan 2025)
-  const [periods, setPeriods] = useState<SalaryPeriodData[]>([
-    {
-      id: "PER-05",
-      periode: "Mei 2025",
-      cutoff: "26 Apr 2025 - 25 Mei 2025",
-      tanggalBayar: "30 Mei 2025",
-      gajiPokok: defaultData?.gajiPokok ?? 5250000,
-      tunjanganPeran: defaultData?.tunjanganPeran ?? 1250000,
-      tugasTambahan: defaultData?.tugasTambahan ?? 500000,
-      insentifShift: defaultData?.insentifShift ?? 1250000,
-      potonganAbsensi: defaultData?.potonganAbsensi ?? 120000,
-      bpjsKesehatan: defaultData?.bpjsKesehatan ?? 300000,
-      bpjsKetenagakerjaan: defaultData?.bpjsKetenagakerjaan ?? 200000,
-      pph21: defaultData?.pph21 ?? 750000,
-      status: "Terbayar",
-      namaBank: "Bank Mandiri",
-      nomorRekening: "137-00-1928391-4",
-    },
-    {
-      id: "PER-04",
-      periode: "April 2025",
-      cutoff: "26 Mar 2025 - 25 Apr 2025",
-      tanggalBayar: "30 Apr 2025",
-      gajiPokok: defaultData?.gajiPokok ?? 5250000,
-      tunjanganPeran: defaultData?.tunjanganPeran ?? 1250000,
-      tugasTambahan: defaultData?.tugasTambahan ?? 500000,
-      insentifShift: defaultData?.insentifShift ?? 1100000,
-      potonganAbsensi: 0,
-      bpjsKesehatan: defaultData?.bpjsKesehatan ?? 300000,
-      bpjsKetenagakerjaan: defaultData?.bpjsKetenagakerjaan ?? 200000,
-      pph21: defaultData?.pph21 ?? 750000,
-      status: "Terbayar",
-      namaBank: "Bank Mandiri",
-      nomorRekening: "137-00-1928391-4",
-    },
-    {
-      id: "PER-03",
-      periode: "Maret 2025",
-      cutoff: "26 Feb 2025 - 25 Mar 2025",
-      tanggalBayar: "31 Mar 2025",
-      gajiPokok: defaultData?.gajiPokok ?? 5250000,
-      tunjanganPeran: defaultData?.tunjanganPeran ?? 1250000,
-      tugasTambahan: defaultData?.tugasTambahan ?? 400000,
-      insentifShift: defaultData?.insentifShift ?? 950000,
-      potonganAbsensi: 60000,
-      bpjsKesehatan: defaultData?.bpjsKesehatan ?? 300000,
-      bpjsKetenagakerjaan: defaultData?.bpjsKetenagakerjaan ?? 200000,
-      pph21: defaultData?.pph21 ?? 750000,
-      status: "Terbayar",
-      namaBank: "Bank Mandiri",
-      nomorRekening: "137-00-1928391-4",
-    },
-    {
-      id: "PER-02",
-      periode: "Februari 2025",
-      cutoff: "26 Jan 2025 - 25 Feb 2025",
-      tanggalBayar: "28 Feb 2025",
-      gajiPokok: defaultData?.gajiPokok ?? 5250000,
-      tunjanganPeran: defaultData?.tunjanganPeran ?? 1250000,
-      tugasTambahan: defaultData?.tugasTambahan ?? 500000,
-      insentifShift: defaultData?.insentifShift ?? 1200000,
-      potonganAbsensi: 0,
-      bpjsKesehatan: defaultData?.bpjsKesehatan ?? 300000,
-      bpjsKetenagakerjaan: defaultData?.bpjsKetenagakerjaan ?? 200000,
-      pph21: defaultData?.pph21 ?? 750000,
-      status: "Terbayar",
-      namaBank: "Bank Mandiri",
-      nomorRekening: "137-00-1928391-4",
-    },
-    {
-      id: "PER-01",
-      periode: "Januari 2025",
-      cutoff: "26 Des 2024 - 25 Jan 2025",
-      tanggalBayar: "31 Jan 2025",
-      gajiPokok: defaultData?.gajiPokok ?? 5250000,
-      tunjanganPeran: defaultData?.tunjanganPeran ?? 1250000,
-      tugasTambahan: defaultData?.tugasTambahan ?? 500000,
-      insentifShift: defaultData?.insentifShift ?? 1050000,
-      potonganAbsensi: 0,
-      bpjsKesehatan: defaultData?.bpjsKesehatan ?? 300000,
-      bpjsKetenagakerjaan: defaultData?.bpjsKetenagakerjaan ?? 200000,
-      pph21: defaultData?.pph21 ?? 750000,
-      status: "Terbayar",
-      namaBank: "Bank Mandiri",
-      nomorRekening: "137-00-1928391-4",
-    },
-  ]);
+  // Period list from backend
+  const [periods, setPeriods] = useState<SalaryPeriodData[]>([]);
 
   // State pencarian & filter
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -155,7 +84,7 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
   const [showAppealModal, setShowAppealModal] = useState<boolean>(false);
   const [appealPeriod, setAppealPeriod] = useState<SalaryPeriodData | null>(null);
   const [appealComponent, setAppealComponent] = useState<string>("Tunjangan Peran / Shift Malam");
-  const [appealAmount, setAppealAmount] = useState<string>("350.000");
+  const [appealAmount, setAppealAmount] = useState<string>("0");
   const [appealReason, setAppealReason] = useState<string>("");
   const [isSubmittingAppeal, setIsSubmittingAppeal] = useState<boolean>(false);
 
@@ -172,40 +101,67 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
           penggajianService.rekeningSaya(),
         ]);
 
+        let bankName = "-";
+        let acctNumber = "-";
         if (dataRekening.status === "fulfilled" && dataRekening.value && dataRekening.value.length > 0) {
           const rek = dataRekening.value[0];
           setUserRekening(`${rek.namaBank} •••• ${rek.nomorRekening.slice(-4)}`);
+          bankName = rek.namaBank;
+          acctNumber = rek.nomorRekening;
         }
 
         if (dataGaji.status === "fulfilled" && dataGaji.value && dataGaji.value.length > 0) {
           const mapped: SalaryPeriodData[] = dataGaji.value.map((item: PenggajianItem) => {
-            const gapok = Number(item.gajiPokok) || 5000000;
-            const tunj = Number(item.tunjangan) || 1200000;
+            const gapok = Number(item.gajiPokok) || 0;
+            const tunj = Number(item.tunjangan) || 0;
             const pot = Number(item.potongan) || 0;
             const isLunas = item.statusPembayaran === "Lunas" || item.statusPembayaran === "Terbayar";
+
+            const rt = item.rincianTunjangan;
+            const rp = item.rincianPotongan;
+
+            const tunjanganPeran = rt ? Number(rt.tunjanganJabatan) || 0 : tunj;
+            const tunjanganKehadiran = rt ? Number(rt.tunjanganKehadiran) || 0 : 0;
+            const tugasTambahan = rt ? Number(rt.uangLembur) || 0 : 0;
+            const insentifShift = rt ? Number(rt.tunjanganShiftMalam) || 0 : 0;
+            const insentifJasaMedis = rt ? Number(rt.insentifJasaMedis) || 0 : 0;
+            const tunjanganTambahan = rt ? Number(rt.tunjanganTambahan) || 0 : 0;
+
+            const potonganTidakHadir = rp ? Number(rp.potonganTidakHadir) || 0 : 0;
+            const potonganTerlambat = rp ? Number(rp.potonganTerlambat) || 0 : 0;
+            const potonganTambahan = rp ? Number(rp.potonganTambahan) || 0 : 0;
 
             return {
               id: item.idGaji,
               periode: item.periodeGaji,
               cutoff: `Periode ${item.periodeGaji}`,
-              tanggalBayar: "Akhir Bulan",
+              tanggalBayar: isLunas ? "Terbayar" : "Diproses",
               gajiPokok: gapok,
-              tunjanganPeran: Math.round(tunj * 0.5),
-              tugasTambahan: Math.round(tunj * 0.2),
-              insentifShift: Math.round(tunj * 0.3),
+              tunjanganPeran,
+              tunjanganKehadiran,
+              tugasTambahan,
+              insentifShift,
+              insentifJasaMedis,
+              tunjanganTambahan,
               potonganAbsensi: pot,
-              bpjsKesehatan: 300000,
-              bpjsKetenagakerjaan: 200000,
-              pph21: 750000,
+              potonganTidakHadir,
+              potonganTerlambat,
+              potonganTambahan,
+              bpjsKesehatan: 0,
+              bpjsKetenagakerjaan: 0,
+              pph21: 0,
               status: isLunas ? "Terbayar" : "Diproses",
-              namaBank: "Bank Mandiri",
-              nomorRekening: "137-00-1928391-4",
+              namaBank: bankName,
+              nomorRekening: acctNumber,
+              metrikKehadiran: item.metrikKehadiran,
             };
           });
           setPeriods(mapped);
+        } else {
+          setPeriods([]);
         }
       } catch {
-        // Fallback default periods
+        setPeriods([]);
       }
     }
     loadSalaryData();
@@ -221,8 +177,19 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
 
   // Helper hitung pendapatan, potongan, dan net
   const calculateSalary = (item: SalaryPeriodData) => {
-    const pend = item.gajiPokok + item.tunjanganPeran + item.tugasTambahan + item.insentifShift;
-    const pot = item.potonganAbsensi + item.bpjsKesehatan + item.bpjsKetenagakerjaan + item.pph21;
+    const pend =
+      (item.gajiPokok || 0) +
+      (item.tunjanganPeran || 0) +
+      (item.tunjanganKehadiran || 0) +
+      (item.tugasTambahan || 0) +
+      (item.insentifShift || 0) +
+      (item.insentifJasaMedis || 0) +
+      (item.tunjanganTambahan || 0);
+    const pot =
+      (item.potonganAbsensi || 0) +
+      (item.bpjsKesehatan || 0) +
+      (item.bpjsKetenagakerjaan || 0) +
+      (item.pph21 || 0);
     const bersih = Math.max(0, pend - pot);
     return { pend, pot, bersih };
   };
@@ -273,20 +240,26 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
       periode: item.periode,
       cutoff: item.cutoff,
       status: item.status,
-      pegawai: user?.nama || "Ns. Ayu Lestari, S.Kep., Ns.",
-      nip: user?.nip || "198904122014022001",
-      jabatan: user?.jabatan || "Perawat Pelaksana",
-      unit: user?.unit || "Unit Rawat Inap",
+      pegawai: user?.nama || "-",
+      nip: user?.nip || "-",
+      jabatan: user?.jabatan || "-",
+      unit: user?.unit || "-",
       tanggalBayar: item.tanggalBayar,
       rekening: userRekening,
       gajiPokok: item.gajiPokok,
       tunjanganPeran: item.tunjanganPeran,
+      tunjanganKehadiran: item.tunjanganKehadiran,
       tugasTambahan: item.tugasTambahan,
       insentifShift: item.insentifShift,
+      insentifJasaMedis: item.insentifJasaMedis,
+      tunjanganTambahan: item.tunjanganTambahan,
       bpjsKesehatan: item.bpjsKesehatan,
       bpjsKetenagakerjaan: item.bpjsKetenagakerjaan,
       pph21: item.pph21,
       potonganAbsensi: item.potonganAbsensi,
+      potonganTidakHadir: item.potonganTidakHadir,
+      potonganTerlambat: item.potonganTerlambat,
+      potonganTambahan: item.potonganTambahan,
       totalPendapatan: pend,
       totalPotongan: pot,
       takeHomePay: bersih,
@@ -309,20 +282,26 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
       periode: item.periode,
       cutoff: item.cutoff,
       status: item.status,
-      pegawai: user?.nama || "Ns. Ayu Lestari, S.Kep., Ns.",
-      nip: user?.nip || "198904122014022001",
-      jabatan: user?.jabatan || "Perawat Pelaksana",
-      unit: user?.unit || "Unit Rawat Inap",
+      pegawai: user?.nama || "-",
+      nip: user?.nip || "-",
+      jabatan: user?.jabatan || "-",
+      unit: user?.unit || "-",
       tanggalBayar: item.tanggalBayar,
       rekening: userRekening,
       gajiPokok: item.gajiPokok,
       tunjanganPeran: item.tunjanganPeran,
+      tunjanganKehadiran: item.tunjanganKehadiran,
       tugasTambahan: item.tugasTambahan,
       insentifShift: item.insentifShift,
+      insentifJasaMedis: item.insentifJasaMedis,
+      tunjanganTambahan: item.tunjanganTambahan,
       bpjsKesehatan: item.bpjsKesehatan,
       bpjsKetenagakerjaan: item.bpjsKetenagakerjaan,
       pph21: item.pph21,
       potonganAbsensi: item.potonganAbsensi,
+      potonganTidakHadir: item.potonganTidakHadir,
+      potonganTerlambat: item.potonganTerlambat,
+      potonganTambahan: item.potonganTambahan,
       totalPendapatan: pend,
       totalPotongan: pot,
       takeHomePay: bersih,
@@ -435,7 +414,7 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
               {userRekening}
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-1 truncate">
-              a.n. {user?.nama || "Ns. Ayu Lestari"}
+              a.n. {user?.nama || "-"}
             </p>
           </div>
         </div>
@@ -655,23 +634,66 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 text-[#3F3F3F]">
-                      <span>Tunjangan Peran</span>
+                      <span>Tunjangan Peran / Jabatan</span>
                       <span className="font-semibold text-[#202020]">
                         {formatRupiah(selectedDetailItem.tunjanganPeran)}
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 text-[#3F3F3F]">
-                      <span>Tugas Tambahan / Lembur</span>
+                      <span>
+                        Tunjangan Kehadiran
+                        {selectedDetailItem.metrikKehadiran?.hariHadir != null && (
+                          <span className="text-[10px] text-[#7E7E7E] ml-1">
+                            ({selectedDetailItem.metrikKehadiran.hariHadir} hari)
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-semibold text-[#202020]">
+                        {formatRupiah(selectedDetailItem.tunjanganKehadiran)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                      <span>
+                        Uang Lembur / Tugas Tambahan
+                        {selectedDetailItem.metrikKehadiran?.jamLembur != null && selectedDetailItem.metrikKehadiran.jamLembur > 0 && (
+                          <span className="text-[10px] text-[#7E7E7E] ml-1">
+                            ({selectedDetailItem.metrikKehadiran.jamLembur} jam)
+                          </span>
+                        )}
+                      </span>
                       <span className="font-semibold text-[#202020]">
                         {formatRupiah(selectedDetailItem.tugasTambahan)}
                       </span>
                     </div>
                     <div className="flex justify-between pt-2 text-[#3F3F3F]">
-                      <span>Insentif Shift & Jasa Medis</span>
+                      <span>
+                        Tunjangan Shift Malam
+                        {selectedDetailItem.metrikKehadiran?.jumlahShiftMalam != null && selectedDetailItem.metrikKehadiran.jumlahShiftMalam > 0 && (
+                          <span className="text-[10px] text-[#7E7E7E] ml-1">
+                            ({selectedDetailItem.metrikKehadiran.jumlahShiftMalam} shift)
+                          </span>
+                        )}
+                      </span>
                       <span className="font-semibold text-[#202020]">
                         {formatRupiah(selectedDetailItem.insentifShift)}
                       </span>
                     </div>
+                    {selectedDetailItem.insentifJasaMedis > 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>Insentif Jasa Medis</span>
+                        <span className="font-semibold text-[#202020]">
+                          {formatRupiah(selectedDetailItem.insentifJasaMedis)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDetailItem.tunjanganTambahan !== 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>Penyesuaian / Tunjangan Tambahan</span>
+                        <span className={`font-semibold ${selectedDetailItem.tunjanganTambahan < 0 ? "text-[#9A2500]" : "text-[#202020]"}`}>
+                          {selectedDetailItem.tunjanganTambahan < 0 ? `- ${formatRupiah(Math.abs(selectedDetailItem.tunjanganTambahan))}` : formatRupiah(selectedDetailItem.tunjanganTambahan)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-[#D8F0D3] rounded-xl p-2.5 flex items-center justify-between text-xs font-bold text-[#0E6100]">
@@ -705,14 +727,61 @@ export function SalaryDetailView({ defaultData }: SalaryDetailViewProps) {
                         {formatRupiah(selectedDetailItem.pph21)}
                       </span>
                     </div>
-                    <div className="flex justify-between pt-2 text-[#3F3F3F]">
-                      <span>Potongan Keterlambatan</span>
-                      <span className="font-semibold text-[#9A2500]">
-                        {selectedDetailItem.potonganAbsensi > 0
-                          ? `- ${formatRupiah(selectedDetailItem.potonganAbsensi)}`
-                          : "Rp 0"}
-                      </span>
-                    </div>
+                    {selectedDetailItem.potonganTidakHadir > 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>
+                          Potongan Tidak Hadir / Alpa
+                          {selectedDetailItem.metrikKehadiran?.hariAlpa != null && (
+                            <span className="text-[10px] text-[#7E7E7E] ml-1">
+                              ({selectedDetailItem.metrikKehadiran.hariAlpa} hari)
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-semibold text-[#9A2500]">
+                          - {formatRupiah(selectedDetailItem.potonganTidakHadir)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDetailItem.potonganTerlambat > 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>
+                          Potongan Keterlambatan
+                          {selectedDetailItem.metrikKehadiran?.jumlahTerlambat != null && (
+                            <span className="text-[10px] text-[#7E7E7E] ml-1">
+                              ({selectedDetailItem.metrikKehadiran.jumlahTerlambat}x)
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-semibold text-[#9A2500]">
+                          - {formatRupiah(selectedDetailItem.potonganTerlambat)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDetailItem.potonganTambahan !== 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>Penyesuaian / Potongan Tambahan</span>
+                        <span className="font-semibold text-[#9A2500]">
+                          {selectedDetailItem.potonganTambahan > 0 ? `- ${formatRupiah(selectedDetailItem.potonganTambahan)}` : `+ ${formatRupiah(Math.abs(selectedDetailItem.potonganTambahan))}`}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDetailItem.potonganAbsensi > 0 &&
+                     selectedDetailItem.potonganTidakHadir === 0 &&
+                     selectedDetailItem.potonganTerlambat === 0 &&
+                     selectedDetailItem.potonganTambahan === 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>Potongan Absensi & Penalti</span>
+                        <span className="font-semibold text-[#9A2500]">
+                          - {formatRupiah(selectedDetailItem.potonganAbsensi)}
+                        </span>
+                      </div>
+                    )}
+                    {selectedDetailItem.potonganAbsensi === 0 && (
+                      <div className="flex justify-between pt-2 text-[#3F3F3F]">
+                        <span>Potongan Absensi</span>
+                        <span className="font-semibold text-[#202020]">Rp 0</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-[#FCDFD8] rounded-xl p-2.5 flex items-center justify-between text-xs font-bold text-[#9A2500]">

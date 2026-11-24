@@ -12,6 +12,7 @@ import izinRoutes from './izin.routes.js';
 import pedomanGajiRoutes from './pedomanGaji.routes.js';
 import penggajianRoutes from './penggajian.routes.js';
 import bandingGajiRoutes from './bandingGaji.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use('/izin', izinRoutes);
 router.use('/pedoman-gaji', pedomanGajiRoutes);
 router.use('/penggajian', penggajianRoutes);
 router.use('/banding-gaji', bandingGajiRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 // Daftarkan route modul lain di sini, contoh:
 // router.use('/pasien', pasienRoutes);

@@ -32,6 +32,7 @@ const selectJadwal = {
   pegawai: {
     select: {
       nama: true,
+      nip: true,
       unitKerja: true,
       peran_tenaga_medis: { select: { namaPeran: true } },
     },
@@ -40,11 +41,16 @@ const selectJadwal = {
 
 function parseRentang(dari, sampai, { wajib = false } = {}) {
   if (!dari && !sampai && !wajib) return undefined;
-  const d = parseTanggal(dari);
-  const s = parseTanggal(sampai);
-  if (!d || !s) throw new ApiError(400, 'Parameter tanggal harus berformat YYYY-MM-DD');
-  if (s < d) throw new ApiError(400, 'Tanggal akhir tidak boleh sebelum tanggal awal');
-  return { gte: d, lte: s };
+  if (wajib && (!dari || !sampai)) throw new ApiError(400, 'Parameter dari dan sampai wajib diisi');
+  const d = dari ? parseTanggal(dari) : null;
+  const s = sampai ? parseTanggal(sampai) : null;
+  if (dari && !d) throw new ApiError(400, 'Parameter tanggal awal harus berformat YYYY-MM-DD');
+  if (sampai && !s) throw new ApiError(400, 'Parameter tanggal akhir harus berformat YYYY-MM-DD');
+  if (d && s && s < d) throw new ApiError(400, 'Tanggal akhir tidak boleh sebelum tanggal awal');
+  const filter = {};
+  if (d) filter.gte = d;
+  if (s) filter.lte = s;
+  return filter;
 }
 
 /** GET /api/jadwal/shift — daftar shift & jadwal default spesialis. */
@@ -196,6 +202,13 @@ export const ubahJadwal = asyncHandler(async (req, res) => {
   }
   await validasiJadwal(pegawai, slot, { kecualiIdJadwal: jadwal.idJadwal });
 
+  // Hapus data absensi yang belum masuk (mis. placeholder cuti) jika tanggal jadwal berubah
+  if (tgl.getTime() !== jadwal.tanggal.getTime()) {
+    await prisma.absensi.deleteMany({
+      where: { idJadwal: jadwal.idJadwal, waktuMasuk: null },
+    });
+  }
+
   const data = await prisma.jadwal.update({
     where: { idJadwal: jadwal.idJadwal },
     data: slot,
@@ -214,6 +227,11 @@ export const hapusJadwal = asyncHandler(async (req, res) => {
   if (pengajuan > 0) {
     throw new ApiError(400, 'Jadwal memiliki riwayat pengajuan perubahan, tidak bisa dihapus. Ubah jadwalnya saja.');
   }
+
+  // Hapus data absensi yang belum masuk jika ada
+  await prisma.absensi.deleteMany({
+    where: { idJadwal: jadwal.idJadwal, waktuMasuk: null },
+  });
 
   await prisma.jadwal.delete({ where: { idJadwal: jadwal.idJadwal } });
   res.json({ success: true, message: 'Jadwal dihapus' });

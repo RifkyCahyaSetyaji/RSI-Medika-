@@ -14,100 +14,62 @@ import {
   CheckCircle2,
   AlertCircle,
   DollarSign,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/shared/providers/auth-provider";
 import { StatusBadge } from "@/shared/components/ui/status-badge";
-import { penggajianService } from "@/shared/services/api/penggajian.service";
-import { bandingGajiService } from "@/shared/services/api/banding-gaji.service";
-import { PenggajianItem, BandingGajiItem } from "@/shared/types/api";
+import { dashboardService } from "@/shared/services/api/dashboard.service";
+import { KeuanganDashboardData } from "@/shared/types/api";
+
+function getFormattedDate(): string {
+  return new Date().toLocaleDateString("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export default function KeuanganDashboard() {
   const { user } = useAuth();
-  const [todayFormatted, setTodayFormatted] = useState("Selasa, 10 Oktober 2026");
-  const [totalDisbursed, setTotalDisbursed] = useState<string>("Rp 1,182 M");
-  const [paidCount, setPaidCount] = useState<number>(244);
-  const [totalStaff, setTotalStaff] = useState<number>(248);
-  const [pendingBandingCount, setPendingBandingCount] = useState<number>(3);
-  const [recentPayrollLogs, setRecentPayrollLogs] = useState<
-    { title: string; subtitle: string; status: "Terbayar" | "Disetujui" | "Diproses" | "Menunggu" }[]
-  >([
-    {
-      title: "Disbursement Batch Payroll Periode Mei 2025 ke 244 Rekening Mandiri",
-      subtitle: "Hari ini · 09.24 · Host-to-Host Berhasil",
-      status: "Terbayar",
-    },
-    {
-      title: "Banding potongan absensi disetujui · Ns. Ayu Lestari (+ Rp 120.000)",
-      subtitle: "Kemarin · 15.12 · Penyesuaian Payroll Juni",
-      status: "Disetujui",
-    },
-    {
-      title: "Koreksi rekonsiliasi transfer kliring BNI · Ns. Dewi Sartika",
-      subtitle: "08 Mei 2025 · 11.20 · Menunggu validasi nomor rekening",
-      status: "Diproses",
-    },
-  ]);
+  const [todayFormatted] = useState<string>(getFormattedDate);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [data, setData] = useState<KeuanganDashboardData | null>(null);
 
   useEffect(() => {
-    const now = new Date();
-    setTodayFormatted(
-      now.toLocaleDateString("id-ID", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    );
-
-    async function loadKeuanganData() {
+    let isMounted = true;
+    async function loadData() {
       try {
-        const [gajis, bandings] = await Promise.allSettled([
-          penggajianService.daftarGaji(),
-          bandingGajiService.daftarBanding(),
-        ]);
-
-        if (gajis.status === "fulfilled" && gajis.value && gajis.value.length > 0) {
-          const list = gajis.value;
-          setTotalStaff(list.length);
-          const paid = list.filter(
-            (g: PenggajianItem) => g.statusPembayaran === "Lunas" || g.statusPembayaran === "Terbayar"
-          ).length;
-          setPaidCount(paid);
-
-          const sumGross = list.reduce(
-            (acc: number, item: PenggajianItem) =>
-              acc + (Number(item.gajiPokok) || 0) + (Number(item.tunjangan) || 0) - (Number(item.potongan) || 0),
-            0
-          );
-          if (sumGross > 0) {
-            if (sumGross >= 1000000000) {
-              setTotalDisbursed(`Rp ${(sumGross / 1000000000).toFixed(2)} M`);
-            } else {
-              setTotalDisbursed(`Rp ${(sumGross / 1000000).toFixed(0)} Jt`);
-            }
-          }
+        const res = await dashboardService.getKeuanganDashboard();
+        if (isMounted && res) {
+          setData(res);
         }
-
-        if (bandings.status === "fulfilled" && bandings.value) {
-          const pending = bandings.value.filter(
-            (b: BandingGajiItem) => b.status === "MENUNGGU" || b.status === "DIPROSES"
-          ).length;
-          setPendingBandingCount(pending || bandings.value.length);
-        }
-      } catch {
-        // Fallback default
+      } catch (err) {
+        console.error("Gagal memuat dashboard Keuangan dari backend:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
     }
-    loadKeuanganData();
+    loadData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const monthlyPayrollTrend = [
-    { month: "Jan", total: 1140, label: "Rp 1,14 M" },
-    { month: "Feb", total: 1152, label: "Rp 1,15 M" },
-    { month: "Mar", total: 1165, label: "Rp 1,16 M" },
-    { month: "Apr", total: 1172, label: "Rp 1,17 M" },
-    { month: "Mei", total: 1182.5, label: "Rp 1,18 M", active: true },
-  ];
+  const metrics = data?.metrics || {
+    periodeAktif: "-",
+    totalDisbursed: "Rp 0",
+    totalDisbursedRaw: 0,
+    paidCount: 0,
+    totalStaff: 0,
+    totalPotongan: "Rp 0",
+    totalPotonganRaw: 0,
+    pendingBandingCount: 0,
+  };
+
+  const alokasiBebanPerUnit = data?.alokasiBebanPerUnit || [];
+  const monthlyPayrollTrend = data?.monthlyPayrollTrend || [];
+  const recentPayrollLogs = data?.recentPayrollLogs || [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,8 +95,13 @@ export default function KeuanganDashboard() {
             </span>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#D8F0D3] text-[#0E6100]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#0E6100] animate-pulse" />
-              Siklus Payroll Periode Mei 2025 Aktif
+              Siklus Payroll Periode {metrics.periodeAktif} Aktif
             </span>
+            {isLoading && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#4731B6] font-medium">
+                <Loader2 className="w-3 h-3 animate-spin" /> Sinkron data...
+              </span>
+            )}
           </div>
 
           <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#202020] tracking-tight">
@@ -156,14 +123,14 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-extrabold text-[#4731B6] tracking-tight truncate">
-              {totalDisbursed}
+              {metrics.totalDisbursed}
             </div>
             <p className="text-[11px] text-[#0E6100] font-medium mt-0.5 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" /> Realisasi payroll aktif
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#4731B6] h-full rounded-full" style={{ width: "98.5%" }} />
+            <div className="bg-[#4731B6] h-full rounded-full" style={{ width: "100%" }} />
           </div>
         </div>
 
@@ -175,14 +142,19 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#202020] tracking-tight">
-              {paidCount} <span className="text-xs font-normal text-[#7E7E7E]">/ {totalStaff} Staf</span>
+              {metrics.paidCount} <span className="text-xs font-normal text-[#7E7E7E]">/ {metrics.totalStaff} Staf</span>
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
-              {totalStaff - paidCount} pegawai proses verifikasi bank
+              {Math.max(0, metrics.totalStaff - metrics.paidCount)} pegawai proses verifikasi bank
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#0E6100] h-full rounded-full" style={{ width: "98.4%" }} />
+            <div
+              className="bg-[#0E6100] h-full rounded-full"
+              style={{
+                width: `${metrics.totalStaff > 0 ? (metrics.paidCount / metrics.totalStaff) * 100 : 98}%`,
+              }}
+            />
           </div>
         </div>
 
@@ -194,7 +166,7 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-xl sm:text-2xl font-extrabold text-[#9A2500] tracking-tight truncate">
-              Rp 175,4 Jt
+              {metrics.totalPotongan}
             </div>
             <p className="text-[11px] text-[#5F5F5F] font-medium mt-0.5">
               PPh 21, BPJS Kes & Naker RS
@@ -213,14 +185,14 @@ export default function KeuanganDashboard() {
           </div>
           <div>
             <div className="text-2xl sm:text-3xl font-extrabold text-[#F39C12] tracking-tight">
-              {pendingBandingCount} Berkas
+              {metrics.pendingBandingCount} Berkas
             </div>
             <p className="text-[11px] text-[#7E7E7E] mt-0.5">
               Banding kompensasi menunggu
             </p>
           </div>
           <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#F39C12] h-full rounded-full" style={{ width: "60%" }} />
+            <div className="bg-[#F39C12] h-full rounded-full" style={{ width: `${Math.min(metrics.pendingBandingCount * 25, 100)}%` }} />
           </div>
         </div>
       </div>
@@ -235,7 +207,7 @@ export default function KeuanganDashboard() {
                 <Building className="w-4 h-4 text-[#4731B6]" />
                 <span>Alokasi Beban Penggajian per Unit</span>
               </h3>
-              <p className="text-xs text-[#7E7E7E]">Total realisasi: <strong>Rp 1.182.500.000</strong></p>
+              <p className="text-xs text-[#7E7E7E]">Total realisasi: <strong>{metrics.totalDisbursed}</strong></p>
             </div>
             <Link href="/keuangan/kelola-gaji" className="text-xs font-semibold text-[#4731B6] hover:underline">
               Kelola
@@ -243,45 +215,27 @@ export default function KeuanganDashboard() {
           </div>
 
           <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Unit Rawat Inap & ICU (146 Staf)</span>
-                <span className="text-[#4731B6] font-bold">Rp 640 Juta (54.1%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#4731B6] h-full rounded-full" style={{ width: "54.1%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Dokter Spesialis & Poliklinik (42 Staf)</span>
-                <span className="text-[#3B289E] font-bold">Rp 310 Juta (26.2%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#8D7BE4] h-full rounded-full" style={{ width: "26.2%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Penunjang Medis (Farmasi & Lab) (35 Staf)</span>
-                <span className="text-[#0E6100] font-bold">Rp 142 Juta (12.0%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#0E6100] h-full rounded-full" style={{ width: "12%" }} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-medium mb-1">
-                <span className="text-[#202020] font-semibold">Manajemen & Administrasi (25 Staf)</span>
-                <span className="text-[#7E7E7E] font-bold">Rp 90,5 Juta (7.7%)</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-[#7E7E7E] h-full rounded-full" style={{ width: "7.7%" }} />
-              </div>
-            </div>
+            {alokasiBebanPerUnit.length > 0 ? (
+              alokasiBebanPerUnit.map((item, idx) => (
+                <div key={idx}>
+                  <div className="flex justify-between text-xs font-medium mb-1">
+                    <span className="text-[#202020] font-semibold">{item.unit}</span>
+                    <span className="text-[#4731B6] font-bold">{item.labelNominal} ({item.percent}%)</span>
+                  </div>
+                  <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${item.percent}%`,
+                        backgroundColor: idx === 0 ? "#4731B6" : idx === 1 ? "#3B289E" : idx === 2 ? "#0E6100" : "#7E7E7E",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-gray-400 py-4 text-center">Belum ada data alokasi unit pada database.</p>
+            )}
           </div>
 
           <div className="p-3 bg-[#F2F1F9] rounded-xl flex items-center justify-between text-xs">
@@ -298,44 +252,46 @@ export default function KeuanganDashboard() {
             <div className="space-y-0.5">
               <h3 className="font-bold text-sm sm:text-base text-[#202020] flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-[#4731B6]" />
-                <span>Tren Pengeluaran Payroll 5 Bulan Terakhir</span>
+                <span>Tren Pengeluaran Payroll Periode Terakhir</span>
               </h3>
               <p className="text-xs text-[#7E7E7E]">Pertumbuhan stabil: <strong>+3.7%</strong> YTD</p>
             </div>
             <span className="text-xs font-bold text-[#4731B6] bg-[#F2F1F9] px-2.5 py-1 rounded-lg">
-              Tahun 2025
+              Periode {metrics.periodeAktif}
             </span>
           </div>
 
           {/* Bar Chart */}
           <div className="pt-3 flex items-end justify-between gap-3 h-40 border-b border-gray-100 pb-2">
-            {monthlyPayrollTrend.map((item, idx) => {
-              const height = ((item.total - 1100) / 100) * 100;
-              return (
+            {monthlyPayrollTrend.length > 0 ? (
+              monthlyPayrollTrend.map((item, idx) => (
                 <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                   <span className="text-[10px] font-bold text-[#4731B6] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                     {item.label}
                   </span>
                   <div
-                    className={`w-full max-w-[42px] rounded-t-xl transition-all duration-300 ${
-                      item.active
+                    className={`w-full max-w-[42px] rounded-t-xl transition-all duration-300 ${item.active
                         ? "bg-[#4731B6] shadow-md shadow-[#4731B6]/30"
                         : "bg-[#8D7BE4] hover:bg-[#4731B6]"
-                    }`}
-                    style={{ height: `${Math.max(25, height)}%` }}
+                      }`}
+                    style={{ height: `${item.active ? 85 : 65 + (idx % 3) * 8}%` }}
                   />
                   <span className={`text-xs font-semibold ${item.active ? "text-[#4731B6] font-bold" : "text-[#7E7E7E]"}`}>
                     {item.month}
                   </span>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              <div className="w-full flex items-center justify-center h-full text-xs text-gray-400">
+                Belum ada data tren payroll pada database.
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-xs pt-1">
             <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
               <span className="text-[11px] text-[#7E7E7E] block">Rata-rata Penggajian Bulanan</span>
-              <span className="font-bold text-sm text-[#202020]">Rp 1,162 Miliar</span>
+              <span className="font-bold text-sm text-[#202020]">{metrics.totalDisbursed}</span>
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-100">
               <span className="text-[11px] text-[#7E7E7E] block">Sisa Alokasi Anggaran Q2</span>
@@ -358,7 +314,7 @@ export default function KeuanganDashboard() {
             <h4 className="font-bold text-sm text-[#202020] group-hover:text-[#4731B6] transition-colors truncate">
               Kelola Gaji Staf
             </h4>
-            <p className="text-xs text-[#7E7E7E] truncate">Proses payroll 248 pegawai RS</p>
+            <p className="text-xs text-[#7E7E7E] truncate">Proses payroll {metrics.totalStaff} pegawai RS</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#4731B6] shrink-0" />
         </Link>
@@ -374,7 +330,7 @@ export default function KeuanganDashboard() {
             <h4 className="font-bold text-sm text-[#202020] group-hover:text-[#4731B6] transition-colors truncate">
               Aju Banding
             </h4>
-            <p className="text-xs text-[#7E7E7E] truncate">12 berkas sengketa upah</p>
+            <p className="text-xs text-[#7E7E7E] truncate">{metrics.pendingBandingCount} berkas sengketa upah</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#4731B6] shrink-0" />
         </Link>
@@ -399,27 +355,33 @@ export default function KeuanganDashboard() {
       {/* 5. Aktivitas Terbaru */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm sm:text-base font-bold text-[#202020]">Aktivitas & Log Payroll Terbaru</h3>
+          <h3 className="text-sm sm:text-base font-bold text-[#202020]">Aktivitas Penggajian & Pencairan Terbaru</h3>
           <Link href="/keuangan/kelola-gaji" className="text-xs font-semibold text-[#4731B6] hover:underline">
-            Lihat semua
+            Lihat semua log
           </Link>
         </div>
 
         <div className="bg-white rounded-[24px] shadow-xs border border-black/5 divide-y divide-gray-100 overflow-hidden">
-          {recentPayrollLogs.map((item, idx) => (
-            <div
-              key={idx}
-              className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
-            >
-              <div className="min-w-0">
-                <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
-                  {item.title}
-                </h5>
-                <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+          {recentPayrollLogs.length > 0 ? (
+            recentPayrollLogs.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50/50 transition-colors"
+              >
+                <div className="min-w-0">
+                  <h5 className="font-semibold text-xs sm:text-sm text-[#202020] truncate">
+                    {item.title}
+                  </h5>
+                  <p className="text-[11px] sm:text-xs text-[#7E7E7E] mt-1">{item.subtitle}</p>
+                </div>
+                <StatusBadge status={item.status} />
               </div>
-              <StatusBadge status={item.status} />
+            ))
+          ) : (
+            <div className="p-6 text-center text-xs text-gray-400">
+              Belum ada aktivitas penggajian pada database.
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>

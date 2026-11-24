@@ -54,10 +54,10 @@ export function BandingValidationModal({
   );
   const [jenisKoreksi, setJenisKoreksi] = useState<"tunjangan" | "potongan" | "none">("tunjangan");
   const [nominalKoreksi, setNominalKoreksi] = useState<string>(
-    item.nominal ? item.nominal.replace(/[^0-9]/g, "") : "350000"
+    item.nominal ? item.nominal.replace(/[^0-9]/g, "") : "0"
   );
   const [catatanKeputusan, setCatatanKeputusan] = useState<string>(
-    item.keputusan || "Telah diverifikasi sesuai bukti jadwal dan data presensi valid."
+    item.keputusan || ""
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -98,10 +98,10 @@ export function BandingValidationModal({
           nominal:
             nominalNum > 0
               ? new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                  maximumFractionDigits: 0,
-                }).format(nominalNum)
+                style: "currency",
+                currency: "IDR",
+                maximumFractionDigits: 0,
+              }).format(nominalNum)
               : item.nominal,
         });
       }
@@ -175,7 +175,7 @@ export function BandingValidationModal({
               <span className="text-[#7E7E7E] block">Periode Gaji yang Dibanding:</span>
               <span className="font-semibold text-[#202020] flex items-center gap-1.5 mt-0.5">
                 <Calendar className="w-3.5 h-3.5 text-[#4731B6]" />
-                <span>{item.periode || "Mei 2025"}</span>
+                <span>{item.periode || "November 2026"}</span>
               </span>
             </div>
             <div>
@@ -252,33 +252,30 @@ export function BandingValidationModal({
                 <button
                   type="button"
                   onClick={() => setStatusKeputusan("Disetujui")}
-                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
-                    statusKeputusan === "Disetujui"
+                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${statusKeputusan === "Disetujui"
                       ? "bg-[#0E6100] text-white border-[#0E6100] shadow-xs"
                       : "bg-white text-[#3F3F3F] border-gray-200 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   ✓ Disetujui
                 </button>
                 <button
                   type="button"
                   onClick={() => setStatusKeputusan("Diproses")}
-                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
-                    statusKeputusan === "Diproses"
+                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${statusKeputusan === "Diproses"
                       ? "bg-[#3B289E] text-white border-[#3B289E] shadow-xs"
                       : "bg-white text-[#3F3F3F] border-gray-200 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   ⟳ Diproses
                 </button>
                 <button
                   type="button"
                   onClick={() => setStatusKeputusan("Ditolak")}
-                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${
-                    statusKeputusan === "Ditolak"
+                  className={`p-3 rounded-xl text-xs font-semibold border text-center transition-all cursor-pointer ${statusKeputusan === "Ditolak"
                       ? "bg-[#9A2500] text-white border-[#9A2500] shadow-xs"
                       : "bg-white text-[#3F3F3F] border-gray-200 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   ✕ Ditolak
                 </button>
